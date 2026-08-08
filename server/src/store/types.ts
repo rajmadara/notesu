@@ -22,19 +22,19 @@ export interface Note {
   updated_at: number
 }
 
-// Storage-agnostic contract. Implement this once per backend (local SQLite
-// today, a cloud DB like Postgres/Supabase later) and the routes layer never
-// has to change.
+// Storage-agnostic contract. Implement this once per backend (Postgres/Supabase
+// today, something else later) and the routes layer never has to change.
 export interface TaskStore {
-  getAllTasks(): Task[]
-  createTask(title: string): Task
-  deleteTask(id: number): void
-  setTaskStatus(id: number, status: TaskStatus): void
-  setTaskPriority(id: number, priority: TaskPriority): void
-  setTaskTags(id: number, tags: string): void
-  startTaskTimer(id: number): number
-  stopTaskTimer(id: number): void
-  resetTaskTimer(id: number): void
-  getNotesForTask(taskId: number): Note[]
-  upsertTaskNote(taskId: number, content: string): Note
+  getAllTasks(): Promise<Task[]>
+  createTask(title: string): Promise<Task>
+  deleteTask(id: number): Promise<void>
+  setTaskTitle(id: number, title: string): Promise<void>
+  setTaskStatus(id: number, status: TaskStatus): Promise<void>
+  setTaskPriority(id: number, priority: TaskPriority): Promise<void>
+  setTaskTags(id: number, tags: string): Promise<void>
+  startTaskTimer(id: number): Promise<number>
+  stopTaskTimer(id: number): Promise<void>
+  resetTaskTimer(id: number): Promise<void>
+  getNotesForTask(taskId: number): Promise<Note[]>
+  upsertTaskNote(taskId: number, content: string): Promise<Note>
 }

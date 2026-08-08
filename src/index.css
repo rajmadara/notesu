@@ -1,19 +1,19 @@
 :root {
-  --text: #6b7280;
-  --text-h: #111827;
-  --bg: #ffffff;
-  --page-bg: #f4f5f7;
-  --border: #e5e7eb;
+  --text: #6f6a5e;
+  --text-h: #23211a;
+  --bg: #fffdf8;
+  --page-bg: #f3f1e9;
+  --border: #e7e3d6;
   --code-bg: #f4f3ec;
-  --accent: #2563eb;
-  --accent-bg: rgba(37, 99, 235, 0.08);
-  --accent-border: rgba(37, 99, 235, 0.35);
+  --accent: #0f766e;
+  --accent-bg: rgba(15, 118, 110, 0.09);
+  --accent-border: rgba(15, 118, 110, 0.35);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
-    rgba(0, 0, 0, 0.06) 0 1px 2px, rgba(0, 0, 0, 0.04) 0 8px 16px -4px;
+    rgba(60, 50, 20, 0.05) 0 1px 2px, rgba(60, 50, 20, 0.05) 0 8px 20px -6px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Manrope Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Bricolage Grotesque Variable', 'Manrope Variable', system-ui, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
@@ -33,15 +33,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #1c1d23;
-    --page-bg: #131417;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #3b82f6;
-    --accent-bg: rgba(59, 130, 246, 0.15);
-    --accent-border: rgba(59, 130, 246, 0.45);
+    --text: #a49e8f;
+    --text-h: #f2efe4;
+    --bg: #201f1a;
+    --page-bg: #161511;
+    --border: #363329;
+    --code-bg: #26241d;
+    --accent: #2fbfa8;
+    --accent-bg: rgba(47, 191, 168, 0.14);
+    --accent-border: rgba(47, 191, 168, 0.45);
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 1px 2px, rgba(0, 0, 0, 0.3) 0 8px 16px -4px;

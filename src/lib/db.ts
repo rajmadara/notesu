@@ -1,6 +1,27 @@
 import type { Note, Task, TaskPriority, TaskStatus } from './types'
 
-const API_BASE = 'http://localhost:3001/api/tasks'
+const API_ORIGIN = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:3001`
+const API_BASE = `${API_ORIGIN}/api/tasks`
+
+export type NoteFormatMode = 'formal' | 'informal' | 'summarize'
+
+export async function formatNote(
+  content: string,
+  mode: NoteFormatMode,
+): Promise<string> {
+  const res = await fetch(`${API_ORIGIN}/api/ai/format-note`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, mode }),
+  })
+  const body = (await res.json().catch(() => null)) as
+    | { content?: string; error?: string }
+    | null
+  if (!res.ok) {
+    throw new Error(body?.error ?? `AI request failed: ${res.status}`)
+  }
+  return body?.content ?? ''
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -24,6 +45,13 @@ export async function createTask(title: string): Promise<Task> {
 
 export async function deleteTask(id: number): Promise<void> {
   await request<void>(`/${id}`, { method: 'DELETE' })
+}
+
+export async function setTaskTitle(id: number, title: string): Promise<void> {
+  await request<void>(`/${id}/title`, {
+    method: 'PUT',
+    body: JSON.stringify({ title }),
+  })
 }
 
 export async function setTaskStatus(

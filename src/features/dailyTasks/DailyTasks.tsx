@@ -7,6 +7,7 @@ import {
   resetTaskTimer,
   setTaskPriority,
   setTaskStatus,
+  setTaskTitle,
   startTaskTimer,
   stopTaskTimer,
 } from '../../lib/db'
@@ -54,6 +55,11 @@ export function DailyTasks() {
     await refresh()
   }
 
+  async function handleRename(task: Task, title: string) {
+    await setTaskTitle(task.id, title)
+    await refresh()
+  }
+
   async function handleToggleTimer(task: Task) {
     if (task.running_since !== null) {
       await stopTaskTimer(task.id)
@@ -74,6 +80,9 @@ export function DailyTasks() {
   }
 
   const doneCount = tasks.filter((t) => t.status === 'done').length
+  const sortedTasks = [...tasks].sort(
+    (a, b) => Number(a.status === 'done') - Number(b.status === 'done'),
+  )
 
   return (
     <div className="daily-tasks">
@@ -99,13 +108,14 @@ export function DailyTasks() {
         <p className="daily-tasks__empty">No tasks yet.</p>
       ) : (
         <ul className="task-list">
-          {tasks.map((task) => (
+          {sortedTasks.map((task) => (
             <TaskItem
               key={task.id}
               task={task}
               onCycleStatus={handleCycleStatus}
               onToggleDone={handleToggleDone}
               onChangePriority={handleChangePriority}
+              onRename={handleRename}
               onToggleTimer={handleToggleTimer}
               onResetTimer={handleResetTimer}
               onDelete={handleDelete}

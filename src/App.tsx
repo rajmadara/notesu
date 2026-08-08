@@ -6,7 +6,7 @@ function App() {
     <div className="app">
       <header className="app__header">
         <h1>
-          Note<span className="app__logo-accent">su</span>
+          Notes<span className="app__logo-accent">u</span>
         </h1>
       </header>
       <main>

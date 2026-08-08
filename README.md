@@ -9,7 +9,7 @@ React + TypeScript (frontend, Vite)
         ↓ REST API (fetch)
 Express + TypeScript (backend, Node.js)
         ↓ TaskStore interface
-Node's built-in SQLite (server/notesu.db — a real file on disk)
+Node's built-in SQLite (server/Notesu.db — a real file on disk)
 ```
 
 - **Frontend**: React 19 + TypeScript, bundled with Vite
@@ -17,7 +17,7 @@ Node's built-in SQLite (server/notesu.db — a real file on disk)
 - **Database**: SQLite, accessed via Node's built-in `node:sqlite` module (no native compilation required — no `better-sqlite3`, no C++ build tools needed)
 - **Storage is swappable**: the backend talks to the database only through a `TaskStore` interface ([server/src/store/types.ts](server/src/store/types.ts)). Today's implementation (`SqliteTaskStore`) reads/writes a local file. A future cloud-backed implementation (e.g. Postgres/Supabase) can be dropped in behind the same interface without touching the API routes or the frontend.
 
-All data currently lives locally on this machine, in `server/notesu.db`. Nothing is sent to the cloud.
+All data currently lives locally on this machine, in `server/Notesu.db`. Nothing is sent to the cloud.
 
 ## Running it locally
 
@@ -51,7 +51,7 @@ Notesu/
 │           ├── types.ts        TaskStore interface (the local/cloud swap point)
 │           └── SqliteTaskStore.ts   Local SQLite implementation
 │
-└── notesu.db (generated)       The actual database file, created on first run
+└── Notesu.db (generated)       The actual database file, created on first run
 ```
 
 ## Current features (v1)

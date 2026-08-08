@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Note, Task, TaskPriority, TaskStatus } from '../../lib/types'
-import { getNotesForTask, setTaskTags, upsertTaskNote } from '../../lib/db'
+import {
+  formatNote,
+  getNotesForTask,
+  setTaskTags,
+  upsertTaskNote,
+} from '../../lib/db'
 import { formatTimestamp } from '../../lib/date'
 import { formatDuration, useTaskTimer } from './useTaskTimer'
 
@@ -22,6 +27,14 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: 'red', label: 'Red' },
 ]
 
+type NoteAction = 'formal' | 'informal' | 'summarize'
+
+const NOTE_ACTIONS: { value: NoteAction; label: string }[] = [
+  { value: 'formal', label: 'Formal' },
+  { value: 'informal', label: 'Informal' },
+  { value: 'summarize', label: 'Summarize' },
+]
+
 interface Props {
   task: Task
   onCycleStatus: (task: Task) => void
@@ -30,6 +43,7 @@ interface Props {
   onResetTimer: (task: Task) => void
   onDelete: (task: Task) => void
   onChangePriority: (task: Task, priority: TaskPriority) => void
+  onRename: (task: Task, title: string) => void
 }
 
 export function TaskItem({
@@ -40,6 +54,7 @@ export function TaskItem({
   onResetTimer,
   onDelete,
   onChangePriority,
+  onRename,
 }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [notes, setNotes] = useState('')
@@ -67,6 +82,51 @@ export function TaskItem({
     setNote(saved)
   }
 
+  const [aiBusy, setAiBusy] = useState<NoteAction | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [previousNotes, setPreviousNotes] = useState<string | null>(null)
+
+  async function handleNoteAction(action: NoteAction) {
+    if (aiBusy) return
+    if (!notes.trim()) {
+      setAiError('Write a note first, then format it.')
+      return
+    }
+    setAiBusy(action)
+    setAiError(null)
+    try {
+      const transformed = await formatNote(notes, action)
+      setPreviousNotes(notes)
+      setNotes(transformed)
+      const saved = await upsertTaskNote(task.id, transformed)
+      setNote(saved)
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'AI request failed.')
+    } finally {
+      setAiBusy(null)
+    }
+  }
+
+  async function handleUndoNoteAction() {
+    if (previousNotes === null) return
+    const restored = previousNotes
+    setPreviousNotes(null)
+    setNotes(restored)
+    const saved = await upsertTaskNote(task.id, restored)
+    setNote(saved)
+  }
+
+  const [titleDraft, setTitleDraft] = useState<string | null>(null)
+
+  function commitTitle() {
+    if (titleDraft === null) return
+    const trimmed = titleDraft.trim()
+    setTitleDraft(null)
+    if (trimmed && trimmed !== task.title) {
+      onRename(task, trimmed)
+    }
+  }
+
   function persistTags(newList: string[]) {
     setTagList(newList)
     setTaskTags(task.id, newList.join(', '))
@@ -88,7 +148,9 @@ export function TaskItem({
   const isRunning = task.running_since !== null
 
   return (
-    <li className={`task-item task-item--${task.status}`}>
+    <li
+      className={`task-item task-item--${task.status} task-item--priority-${task.priority}${expanded ? ' task-item--expanded' : ''}`}
+    >
       <div className="task-item__row">
         <button
           type="button"
@@ -111,57 +173,29 @@ export function TaskItem({
           )}
         </button>
 
-        <span
-          className="task-item__title"
-          onClick={() => setExpanded((e) => !e)}
-        >
-          {task.title}
-        </span>
-
-        <div className="task-item__timer-group">
-          <span className="task-item__timer">{formatDuration(elapsed)}</span>
-
-          <button
-            type="button"
-            className={`task-item__icon-btn${isRunning ? ' task-item__icon-btn--running' : ''}`}
-            onClick={() => onToggleTimer(task)}
-            aria-label={isRunning ? 'Pause timer' : 'Start timer'}
-            title={isRunning ? 'Pause' : 'Start'}
+        {titleDraft !== null ? (
+          <input
+            type="text"
+            className="task-item__title-input"
+            value={titleDraft}
+            autoFocus
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitTitle()
+              if (e.key === 'Escape') setTitleDraft(null)
+            }}
+          />
+        ) : (
+          <span
+            className="task-item__title"
+            onClick={() => setExpanded((e) => !e)}
+            onDoubleClick={() => setTitleDraft(task.title)}
+            title="Click to expand, double-click to rename"
           >
-            {isRunning ? (
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                <rect x="6" y="5" width="4" height="14" rx="1" />
-                <rect x="14" y="5" width="4" height="14" rx="1" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                <path d="M7 4.5v15l13-7.5z" />
-              </svg>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="task-item__icon-btn task-item__icon-btn--stop"
-            onClick={() => onResetTimer(task)}
-            aria-label="Stop and reset timer"
-            title="Reset"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-            </svg>
-          </button>
-        </div>
+            {task.title}
+          </span>
+        )}
 
         <button
           type="button"
@@ -204,17 +238,64 @@ export function TaskItem({
             {note && <span>Note updated {formatTimestamp(note.updated_at)}</span>}
           </div>
 
-          <div className="task-item__priority-picker">
-            {PRIORITY_OPTIONS.map((option) => (
+          <div className="task-item__toolbar">
+            <div className="task-item__priority-picker">
+              {PRIORITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`task-item__priority-swatch task-item__priority-swatch--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
+                  onClick={() => onChangePriority(task, option.value)}
+                  title={option.label}
+                  aria-label={`Set priority to ${option.label}`}
+                />
+              ))}
+            </div>
+
+            <div className="task-item__timer-group">
+              <span className="task-item__timer">{formatDuration(elapsed)}</span>
+
               <button
-                key={option.value}
                 type="button"
-                className={`task-item__priority-swatch task-item__priority-swatch--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
-                onClick={() => onChangePriority(task, option.value)}
-                title={option.label}
-                aria-label={`Set priority to ${option.label}`}
-              />
-            ))}
+                className={`task-item__icon-btn${isRunning ? ' task-item__icon-btn--running' : ''}`}
+                onClick={() => onToggleTimer(task)}
+                aria-label={isRunning ? 'Pause timer' : 'Start timer'}
+                title={isRunning ? 'Pause' : 'Start'}
+              >
+                {isRunning ? (
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M7 4.5v15l13-7.5z" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="task-item__icon-btn task-item__icon-btn--stop"
+                onClick={() => onResetTimer(task)}
+                aria-label="Stop and reset timer"
+                title="Reset"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <textarea
@@ -224,6 +305,31 @@ export function TaskItem({
             placeholder="Notes for this task..."
             rows={4}
           />
+
+          <div className="task-item__note-actions">
+            {NOTE_ACTIONS.map((action) => (
+              <button
+                key={action.value}
+                type="button"
+                className="task-item__note-action"
+                onClick={() => handleNoteAction(action.value)}
+                disabled={aiBusy !== null}
+              >
+                {aiBusy === action.value ? 'Working…' : action.label}
+              </button>
+            ))}
+            {previousNotes !== null && aiBusy === null && (
+              <button
+                type="button"
+                className="task-item__note-action task-item__note-action--undo"
+                onClick={handleUndoNoteAction}
+              >
+                Undo
+              </button>
+            )}
+          </div>
+          {aiError && <div className="task-item__note-error">{aiError}</div>}
+
           <div className="task-item__tags">
             {tagList.map((tag) => (
               <span key={tag} className="task-item__tag-chip">

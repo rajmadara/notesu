@@ -18,6 +18,7 @@ server/dist
 server/*.db
 server/*.db-shm
 server/*.db-wal
+server/.env
 
 # Editor directories and files
 .vscode/*
@@ -29,3 +30,4 @@ server/*.db-wal
 *.njsproj
 *.sln
 *.sw?
+*.old

@@ -1,5 +1,5 @@
 {
-  "name": "notesu",
+  "name": "Notesu",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+    "@fontsource-variable/manrope": "^5.2.8",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
