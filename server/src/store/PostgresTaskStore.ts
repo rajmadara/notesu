@@ -14,7 +14,7 @@ pg.types.setTypeParser(20, (val: string) => parseInt(val, 10))
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations')
 
-const MIGRATIONS = ['0001_init.sql']
+const MIGRATIONS = ['0001_init.sql', '0002_add_user_id.sql']
 
 async function applyMigrations(pool: pg.Pool) {
   await pool.query(`
@@ -42,75 +42,103 @@ export async function createPostgresTaskStore(connectionString: string): Promise
 export class PostgresTaskStore implements TaskStore {
   constructor(private pool: pg.Pool) {}
 
-  async getAllTasks(): Promise<Task[]> {
-    const { rows } = await this.pool.query<Task>('SELECT * FROM tasks ORDER BY created_at DESC')
+  async getAllTasks(userId: string): Promise<Task[]> {
+    const { rows } = await this.pool.query<Task>(
+      'SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId],
+    )
     return rows
   }
 
-  async createTask(title: string): Promise<Task> {
+  async createTask(userId: string, title: string): Promise<Task> {
     const today = new Date().toISOString().slice(0, 10)
     const { rows } = await this.pool.query<Task>(
-      "INSERT INTO tasks (title, date, priority) VALUES ($1, $2, 'default') RETURNING *",
-      [title, today],
+      "INSERT INTO tasks (title, date, priority, user_id) VALUES ($1, $2, 'default', $3) RETURNING *",
+      [title, today, userId],
     )
     return rows[0]
   }
 
-  async deleteTask(id: number): Promise<void> {
-    await this.pool.query('DELETE FROM tasks WHERE id = $1', [id])
+  async deleteTask(userId: string, id: number): Promise<void> {
+    await this.pool.query('DELETE FROM tasks WHERE id = $1 AND user_id = $2', [id, userId])
   }
 
-  async setTaskTitle(id: number, title: string): Promise<void> {
-    await this.pool.query('UPDATE tasks SET title = $1 WHERE id = $2', [title, id])
+  async setTaskTitle(userId: string, id: number, title: string): Promise<void> {
+    await this.pool.query('UPDATE tasks SET title = $1 WHERE id = $2 AND user_id = $3', [
+      title,
+      id,
+      userId,
+    ])
   }
 
-  async setTaskStatus(id: number, status: TaskStatus): Promise<void> {
-    await this.pool.query('UPDATE tasks SET status = $1 WHERE id = $2', [status, id])
+  async setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void> {
+    await this.pool.query('UPDATE tasks SET status = $1 WHERE id = $2 AND user_id = $3', [
+      status,
+      id,
+      userId,
+    ])
   }
 
-  async setTaskPriority(id: number, priority: TaskPriority): Promise<void> {
-    await this.pool.query('UPDATE tasks SET priority = $1 WHERE id = $2', [priority, id])
+  async setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void> {
+    await this.pool.query('UPDATE tasks SET priority = $1 WHERE id = $2 AND user_id = $3', [
+      priority,
+      id,
+      userId,
+    ])
   }
 
-  async setTaskTags(id: number, tags: string): Promise<void> {
-    await this.pool.query('UPDATE tasks SET tags = $1 WHERE id = $2', [tags, id])
+  async setTaskTags(userId: string, id: number, tags: string): Promise<void> {
+    await this.pool.query('UPDATE tasks SET tags = $1 WHERE id = $2 AND user_id = $3', [
+      tags,
+      id,
+      userId,
+    ])
   }
 
-  async startTaskTimer(id: number): Promise<number> {
+  async startTaskTimer(userId: string, id: number): Promise<number> {
     const now = Date.now()
     await this.pool.query(
-      "UPDATE tasks SET running_since = $1, status = 'in_progress' WHERE id = $2 AND running_since IS NULL",
-      [now, id],
+      "UPDATE tasks SET running_since = $1, status = 'in_progress' WHERE id = $2 AND user_id = $3 AND running_since IS NULL",
+      [now, id, userId],
     )
     return now
   }
 
-  async stopTaskTimer(id: number): Promise<void> {
-    const { rows } = await this.pool.query<Task>('SELECT * FROM tasks WHERE id = $1', [id])
+  async stopTaskTimer(userId: string, id: number): Promise<void> {
+    const { rows } = await this.pool.query<Task>(
+      'SELECT * FROM tasks WHERE id = $1 AND user_id = $2',
+      [id, userId],
+    )
     const task = rows[0]
     if (!task || task.running_since === null) return
     const elapsed = Math.floor((Date.now() - Number(task.running_since)) / 1000)
     await this.pool.query(
-      'UPDATE tasks SET seconds = seconds + $1, running_since = NULL WHERE id = $2',
-      [elapsed, id],
+      'UPDATE tasks SET seconds = seconds + $1, running_since = NULL WHERE id = $2 AND user_id = $3',
+      [elapsed, id, userId],
     )
   }
 
-  async resetTaskTimer(id: number): Promise<void> {
-    await this.pool.query('UPDATE tasks SET seconds = 0, running_since = NULL WHERE id = $1', [id])
+  async resetTaskTimer(userId: string, id: number): Promise<void> {
+    await this.pool.query(
+      'UPDATE tasks SET seconds = 0, running_since = NULL WHERE id = $1 AND user_id = $2',
+      [id, userId],
+    )
   }
 
-  async getNotesForTask(taskId: number): Promise<Note[]> {
+  async getNotesForTask(userId: string, taskId: number): Promise<Note[]> {
     const { rows } = await this.pool.query<Note>(
-      'SELECT * FROM notes WHERE task_id = $1 ORDER BY created_at ASC',
-      [taskId],
+      `SELECT n.* FROM notes n
+       JOIN tasks t ON t.id = n.task_id
+       WHERE n.task_id = $1 AND t.user_id = $2
+       ORDER BY n.created_at ASC`,
+      [taskId, userId],
     )
     return rows
   }
 
-  async upsertTaskNote(taskId: number, content: string): Promise<Note> {
+  async upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note> {
     const now = Math.floor(Date.now() / 1000)
-    const existing = await this.getNotesForTask(taskId)
+    const existing = await this.getNotesForTask(userId, taskId)
     if (existing.length > 0) {
       const { rows } = await this.pool.query<Note>(
         'UPDATE notes SET content = $1, updated_at = $2 WHERE id = $3 RETURNING *',
@@ -120,9 +148,14 @@ export class PostgresTaskStore implements TaskStore {
     }
     const today = new Date().toISOString().slice(0, 10)
     const { rows } = await this.pool.query<Note>(
-      'INSERT INTO notes (task_id, content, date, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
-      [taskId, content, today, now],
+      `INSERT INTO notes (task_id, content, date, updated_at)
+       SELECT $1, $2, $3, $4 WHERE EXISTS (SELECT 1 FROM tasks WHERE id = $1 AND user_id = $5)
+       RETURNING *`,
+      [taskId, content, today, now, userId],
     )
+    if (!rows[0]) {
+      throw new Error('Task not found or not owned by this user')
+    }
     return rows[0]
   }
 }

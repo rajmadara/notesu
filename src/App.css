@@ -24,6 +24,54 @@
   color: var(--accent);
 }
 
+.app__sign-out {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.app__sign-out:hover {
+  color: var(--text-h);
+  border-color: var(--text-h);
+}
+
+.app__sign-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 0;
+  text-align: center;
+  color: var(--text);
+}
+
+.app__google-btn {
+  height: 46px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--accent-bg);
+  transition: filter 0.15s ease;
+}
+
+.app__google-btn:hover {
+  filter: brightness(1.08);
+}
+
 .daily-tasks__stats {
   display: flex;
   align-items: center;

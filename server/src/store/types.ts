@@ -11,6 +11,7 @@ export interface Task {
   created_at: number
   priority: TaskPriority
   tags: string
+  user_id: string
 }
 
 export interface Note {
@@ -24,17 +25,19 @@ export interface Note {
 
 // Storage-agnostic contract. Implement this once per backend (Postgres/Supabase
 // today, something else later) and the routes layer never has to change.
+// Every method takes the caller's userId first, so no implementation can
+// accidentally return or mutate another user's data.
 export interface TaskStore {
-  getAllTasks(): Promise<Task[]>
-  createTask(title: string): Promise<Task>
-  deleteTask(id: number): Promise<void>
-  setTaskTitle(id: number, title: string): Promise<void>
-  setTaskStatus(id: number, status: TaskStatus): Promise<void>
-  setTaskPriority(id: number, priority: TaskPriority): Promise<void>
-  setTaskTags(id: number, tags: string): Promise<void>
-  startTaskTimer(id: number): Promise<number>
-  stopTaskTimer(id: number): Promise<void>
-  resetTaskTimer(id: number): Promise<void>
-  getNotesForTask(taskId: number): Promise<Note[]>
-  upsertTaskNote(taskId: number, content: string): Promise<Note>
+  getAllTasks(userId: string): Promise<Task[]>
+  createTask(userId: string, title: string): Promise<Task>
+  deleteTask(userId: string, id: number): Promise<void>
+  setTaskTitle(userId: string, id: number, title: string): Promise<void>
+  setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void>
+  setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void>
+  setTaskTags(userId: string, id: number, tags: string): Promise<void>
+  startTaskTimer(userId: string, id: number): Promise<number>
+  stopTaskTimer(userId: string, id: number): Promise<void>
+  resetTaskTimer(userId: string, id: number): Promise<void>
+  getNotesForTask(userId: string, taskId: number): Promise<Note[]>
+  upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note>
 }

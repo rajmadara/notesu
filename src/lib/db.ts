@@ -1,7 +1,14 @@
 import type { Note, Task, TaskPriority, TaskStatus } from './types'
+import { supabase } from './supabase'
 
 const API_ORIGIN = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:3001`
 const API_BASE = `${API_ORIGIN}/api/tasks`
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 export type NoteFormatMode = 'formal' | 'informal' | 'summarize'
 
@@ -25,7 +32,7 @@ export async function formatNote(
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     ...options,
   })
   if (!res.ok) {

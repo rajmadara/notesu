@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { loadEnv } from './env.js'
+import { createAuthMiddleware } from './auth.js'
 import { createPostgresTaskStore } from './store/PostgresTaskStore.js'
 import { createTasksRouter } from './routes/tasks.js'
 import { createAiRouter } from './routes/ai.js'
@@ -20,7 +21,7 @@ const app = express()
 // frontend's real domain is known). Unset -> allow all, for local dev.
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? true }))
 app.use(express.json())
-app.use('/api/tasks', createTasksRouter(store))
+app.use('/api/tasks', createAuthMiddleware(), createTasksRouter(store))
 app.use('/api/ai', createAiRouter())
 
 app.listen(PORT, () => {
