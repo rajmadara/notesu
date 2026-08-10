@@ -81,29 +81,6 @@ export async function setTaskPriority(
   })
 }
 
-export async function setTaskTags(id: number, tags: string): Promise<void> {
-  await request<void>(`/${id}/tags`, {
-    method: 'PUT',
-    body: JSON.stringify({ tags }),
-  })
-}
-
-export async function startTaskTimer(id: number): Promise<number> {
-  const result = await request<{ running_since: number }>(
-    `/${id}/timer/start`,
-    { method: 'POST' },
-  )
-  return result.running_since
-}
-
-export async function stopTaskTimer(id: number): Promise<void> {
-  await request<void>(`/${id}/timer/stop`, { method: 'POST' })
-}
-
-export async function resetTaskTimer(id: number): Promise<void> {
-  await request<void>(`/${id}/timer/reset`, { method: 'POST' })
-}
-
 export async function getNotesForTask(taskId: number): Promise<Note[]> {
   return request<Note[]>(`/${taskId}/notes`)
 }

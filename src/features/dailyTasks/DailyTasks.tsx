@@ -1,22 +1,26 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { Task, TaskPriority } from '../../lib/types'
 import {
   createTask,
   deleteTask,
   getAllTasks,
-  resetTaskTimer,
   setTaskPriority,
   setTaskStatus,
   setTaskTitle,
-  startTaskTimer,
-  stopTaskTimer,
 } from '../../lib/db'
 import { TaskItem, NEXT_STATUS } from './TaskItem'
+
+// The panel pulls in the rich-text editor (~600kB), which nothing else needs —
+// loading it on first open keeps it out of the initial page bundle.
+const TaskDetailPanel = lazy(() =>
+  import('./TaskDetailPanel').then((m) => ({ default: m.TaskDetailPanel })),
+)
 
 export function DailyTasks() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
 
   async function refresh() {
     const rows = await getAllTasks()
@@ -43,9 +47,6 @@ export function DailyTasks() {
   }
 
   async function handleToggleDone(task: Task) {
-    if (task.running_since !== null) {
-      await stopTaskTimer(task.id)
-    }
     await setTaskStatus(task.id, task.status === 'done' ? 'not_started' : 'done')
     await refresh()
   }
@@ -60,20 +61,6 @@ export function DailyTasks() {
     await refresh()
   }
 
-  async function handleToggleTimer(task: Task) {
-    if (task.running_since !== null) {
-      await stopTaskTimer(task.id)
-    } else {
-      await startTaskTimer(task.id)
-    }
-    await refresh()
-  }
-
-  async function handleResetTimer(task: Task) {
-    await resetTaskTimer(task.id)
-    await refresh()
-  }
-
   async function handleDelete(task: Task) {
     await deleteTask(task.id)
     await refresh()
@@ -83,15 +70,10 @@ export function DailyTasks() {
   const sortedTasks = [...tasks].sort(
     (a, b) => Number(a.status === 'done') - Number(b.status === 'done'),
   )
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null
 
   return (
     <div className="daily-tasks">
-      <div className="daily-tasks__stats">
-        <span className="daily-tasks__count">
-          {tasks.length === 0 ? 'No tasks yet' : `${doneCount} / ${tasks.length} done`}
-        </span>
-      </div>
-
       <form className="daily-tasks__add" onSubmit={handleAddTask}>
         <input
           type="text"
@@ -101,6 +83,12 @@ export function DailyTasks() {
         />
         <button type="submit">Add</button>
       </form>
+
+      <div className="daily-tasks__stats">
+        <span className="daily-tasks__count">
+          {tasks.length === 0 ? 'No tasks yet' : `${doneCount} / ${tasks.length} done`}
+        </span>
+      </div>
 
       {loading ? (
         <p className="daily-tasks__empty">Loading...</p>
@@ -114,14 +102,24 @@ export function DailyTasks() {
               task={task}
               onCycleStatus={handleCycleStatus}
               onToggleDone={handleToggleDone}
-              onChangePriority={handleChangePriority}
-              onRename={handleRename}
-              onToggleTimer={handleToggleTimer}
-              onResetTimer={handleResetTimer}
               onDelete={handleDelete}
+              onSelect={(t) => setSelectedTaskId(t.id)}
             />
           ))}
         </ul>
+      )}
+
+      {selectedTask && (
+        <Suspense fallback={null}>
+          <TaskDetailPanel
+            task={selectedTask}
+            onClose={() => setSelectedTaskId(null)}
+            onCycleStatus={handleCycleStatus}
+            onChangePriority={handleChangePriority}
+            onRename={handleRename}
+            onDelete={handleDelete}
+          />
+        </Suspense>
       )}
     </div>
   )

@@ -97,8 +97,9 @@ export class PostgresTaskStore implements TaskStore {
 
   async startTaskTimer(userId: string, id: number): Promise<number> {
     const now = Date.now()
+    // Starting the timer no longer touches status — status is the user's to set.
     await this.pool.query(
-      "UPDATE tasks SET running_since = $1, status = 'in_progress' WHERE id = $2 AND user_id = $3 AND running_since IS NULL",
+      'UPDATE tasks SET running_since = $1 WHERE id = $2 AND user_id = $3 AND running_since IS NULL',
       [now, id, userId],
     )
     return now
