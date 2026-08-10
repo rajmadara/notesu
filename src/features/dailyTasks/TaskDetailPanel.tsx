@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Note, Task, TaskPriority, TaskStatus } from '../../lib/types'
+import type { Note, Task, TaskPriority } from '../../lib/types'
 import { formatNote, getNotesForTask, upsertTaskNote } from '../../lib/db'
 import { formatTimestamp } from '../../lib/date'
 import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  not_started: 'Not Started',
-  in_progress: 'In Progress',
-  done: 'Done',
-}
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: 'default', label: 'Default' },
@@ -20,20 +14,12 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
 interface Props {
   task: Task
   onClose: () => void
-  onCycleStatus: (task: Task) => void
   onDelete: (task: Task) => void
   onChangePriority: (task: Task, priority: TaskPriority) => void
   onRename: (task: Task, title: string) => void
 }
 
-export function TaskDetailPanel({
-  task,
-  onClose,
-  onCycleStatus,
-  onDelete,
-  onChangePriority,
-  onRename,
-}: Props) {
+export function TaskDetailPanel({ task, onClose, onDelete, onChangePriority, onRename }: Props) {
   const [titleValue, setTitleValue] = useState(task.title)
   const [notes, setNotes] = useState('')
   const [note, setNote] = useState<Note | null>(null)
@@ -165,33 +151,19 @@ export function TaskDetailPanel({
             {aiError && <div className="task-item__note-error">{aiError}</div>}
           </div>
 
-          <div className="task-detail-panel__row">
-            <div className="task-detail-panel__field">
-              <label className="task-detail-panel__label">Status</label>
-              <button
-                type="button"
-                className={`task-item__status-label task-item__status-label--${task.status}`}
-                onClick={() => onCycleStatus(task)}
-                title="Click to cycle status"
-              >
-                {STATUS_LABEL[task.status]}
-              </button>
-            </div>
-
-            <div className="task-detail-panel__field">
-              <label className="task-detail-panel__label">Priority</label>
-              <div className="task-item__priority-picker">
-                {PRIORITY_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`task-item__priority-swatch task-item__priority-swatch--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
-                    onClick={() => onChangePriority(task, option.value)}
-                    title={option.label}
-                    aria-label={`Set priority to ${option.label}`}
-                  />
-                ))}
-              </div>
+          <div className="task-detail-panel__field">
+            <label className="task-detail-panel__label">Priority</label>
+            <div className="task-item__priority-picker">
+              {PRIORITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`task-item__priority-swatch task-item__priority-swatch--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
+                  onClick={() => onChangePriority(task, option.value)}
+                  title={option.label}
+                  aria-label={`Set priority to ${option.label}`}
+                />
+              ))}
             </div>
           </div>
 

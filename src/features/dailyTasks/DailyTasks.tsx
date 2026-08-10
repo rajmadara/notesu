@@ -8,7 +8,7 @@ import {
   setTaskStatus,
   setTaskTitle,
 } from '../../lib/db'
-import { TaskItem, NEXT_STATUS } from './TaskItem'
+import { TaskItem } from './TaskItem'
 
 // The panel pulls in the rich-text editor (~600kB), which nothing else needs —
 // loading it on first open keeps it out of the initial page bundle.
@@ -38,11 +38,6 @@ export function DailyTasks() {
     if (!title) return
     await createTask(title)
     setNewTitle('')
-    await refresh()
-  }
-
-  async function handleCycleStatus(task: Task) {
-    await setTaskStatus(task.id, NEXT_STATUS[task.status])
     await refresh()
   }
 
@@ -100,7 +95,6 @@ export function DailyTasks() {
             <TaskItem
               key={task.id}
               task={task}
-              onCycleStatus={handleCycleStatus}
               onToggleDone={handleToggleDone}
               onDelete={handleDelete}
               onSelect={(t) => setSelectedTaskId(t.id)}
@@ -114,7 +108,6 @@ export function DailyTasks() {
           <TaskDetailPanel
             task={selectedTask}
             onClose={() => setSelectedTaskId(null)}
-            onCycleStatus={handleCycleStatus}
             onChangePriority={handleChangePriority}
             onRename={handleRename}
             onDelete={handleDelete}
