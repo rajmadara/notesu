@@ -1,25 +1,56 @@
 .app-shell {
   /* The detail panel's left edge is derived from these, so it always lands
-     exactly where the task list ends. Change them here, not in place. */
-  --sidebar-width: 240px;
+     exactly where the task list ends. Change them here, not in place.
+     The sidebar is an overlay drawer, so its width is NOT part of that sum. */
+  --sidebar-width: 260px;
   --app-padding-x: 24px;
   --content-max: 720px;
   --panel-gap: 32px;
 
-  display: flex;
   min-height: 100svh;
+}
+
+.sidebar__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 27, 18, 0.35);
+  z-index: 30;
+  display: flex;
+  justify-content: flex-start;
+  animation: sidebar-fade-in 0.15s ease;
+}
+
+@keyframes sidebar-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .sidebar {
   width: var(--sidebar-width);
-  flex-shrink: 0;
+  max-width: 82%;
+  height: 100%;
   box-sizing: border-box;
   padding: 20px 16px;
   background: var(--page-bg);
   border-right: 1px solid var(--border);
+  box-shadow: 8px 0 24px rgba(30, 27, 18, 0.12);
   display: flex;
   flex-direction: column;
   gap: 20px;
+  animation: sidebar-slide-in 0.2s ease;
+}
+
+@keyframes sidebar-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .sidebar__account {
@@ -85,18 +116,44 @@
 }
 
 .app {
-  flex: 1;
-  min-width: 0;
+  min-height: 100svh;
+  box-sizing: border-box;
   padding: 20px var(--app-padding-x) 32px;
   text-align: left;
   background: var(--bg);
 }
 
 .app__header {
-  height: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
+  gap: 10px;
   margin: 0 0 24px;
+}
+
+.app__menu-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app__menu-btn:hover {
+  background: var(--page-bg);
+  color: var(--accent);
+}
+
+.app__menu-btn svg {
+  display: block;
 }
 
 .app__header h1 {
@@ -435,9 +492,7 @@
   /* Fills everything to the right of the task list, minus a breathing gap.
      Falls back to a usable width on narrower screens, where it overlaps
      the list instead. */
-  width: calc(
-    100% - var(--sidebar-width) - var(--app-padding-x) - var(--content-max) - var(--panel-gap)
-  );
+  width: calc(100% - var(--app-padding-x) - var(--content-max) - var(--panel-gap));
   min-width: 420px;
   max-width: 100%;
   height: 100%;
@@ -836,5 +891,52 @@
   font-size: 13px;
   padding: 2px 5px;
   background: var(--code-bg);
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    --app-padding-x: 16px;
+  }
+
+  .app {
+    padding: 16px var(--app-padding-x) 24px;
+  }
+
+  /* Phones have no room for a side-by-side layout — the panel takes the
+     whole screen instead of sitting beside the list. */
+  .task-detail-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .task-detail-panel__body,
+  .task-detail-panel__header,
+  .task-detail-panel__footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .task-item__row {
+    grid-template-columns: 20px 1fr 76px 26px;
+    gap: 8px;
+  }
+
+  .daily-tasks__add input,
+  .daily-tasks__add button {
+    height: 42px;
+  }
+
+  .daily-tasks__add button {
+    padding: 0 18px;
+  }
+
+  .notes-editor__toolbar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .notes-editor__ai {
+    margin-left: 0;
+  }
 }
 
