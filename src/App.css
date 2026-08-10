@@ -174,21 +174,77 @@
   margin: 0;
 }
 
-.app__sign-in {
+/* Signed-out state: no header, so the welcome block owns the whole viewport
+   and sits dead centre both ways. */
+/* Signed-out state: a card floating on the tinted page, rather than the
+   app's usual near-white content surface. */
+.app--centered {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 64px 0;
-  text-align: center;
+  /* Symmetric block padding, or the centred card sits slightly high. */
+  padding-block: 24px;
+  background: var(--page-bg);
+}
+
+.app--centered > main {
+  flex: 1;
+  max-width: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* Sits near the top, but with clear air beneath the browser chrome. */
+  padding-top: 48px;
+}
+
+.welcome {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.welcome__card {
+  width: 100%;
+  max-width: 520px;
+  box-sizing: border-box;
+  padding: 48px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.welcome__title {
+  font-family: var(--heading);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--text-h);
+}
+
+.welcome__subtitle {
+  margin: 12px 0 0;
+  font-size: 16px;
   color: var(--text);
 }
 
-.app__google-btn {
+.welcome__actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 36px;
+}
+
+.welcome__google {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   height: 46px;
-  padding: 0 24px;
+  box-sizing: border-box;
+  padding: 0 20px 0 6px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -196,11 +252,33 @@
   background: var(--accent);
   cursor: pointer;
   box-shadow: 0 2px 8px var(--accent-bg);
-  transition: filter 0.15s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
 
-.app__google-btn:hover {
+.welcome__google:hover {
   filter: brightness(1.08);
+  box-shadow: 0 4px 12px var(--accent-bg);
+}
+
+.welcome__google:active {
+  transform: translateY(1px);
+}
+
+/* The G mark needs a light backing — it is multicolour and unreadable
+   directly on the accent fill. */
+.welcome__google-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.welcome__google-icon svg {
+  display: block;
 }
 
 .daily-tasks__stats {
@@ -907,6 +985,31 @@
 
   .app {
     padding: 16px var(--app-padding-x) 24px;
+  }
+
+  .app--centered > main {
+    padding-top: 24px;
+  }
+
+  .welcome__card {
+    padding: 28px 24px;
+  }
+
+  .welcome__title {
+    font-size: 26px;
+  }
+
+  .welcome__subtitle {
+    font-size: 15px;
+  }
+
+  .welcome__actions {
+    margin-top: 32px;
+  }
+
+  .welcome__google {
+    width: 100%;
+    justify-content: center;
   }
 
   /* Phones have no room for a side-by-side layout — the panel takes the
