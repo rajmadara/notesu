@@ -115,6 +115,49 @@
   color: var(--accent);
 }
 
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.theme-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.theme-toggle__option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle__option:hover {
+  color: var(--text-h);
+}
+
+.theme-toggle__option.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .app {
   min-height: 100svh;
   box-sizing: border-box;

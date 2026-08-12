@@ -31,8 +31,11 @@
   }
 }
 
+/* Dark palette applies when the OS prefers dark (and the user hasn't
+   explicitly chosen light), or when the user has explicitly chosen dark —
+   the toggle in the sidebar always wins over the OS setting. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --text: #a49e8f;
     --text-h: #f2efe4;
     --bg: #201f1a;
@@ -47,9 +50,28 @@
       rgba(0, 0, 0, 0.4) 0 1px 2px, rgba(0, 0, 0, 0.3) 0 8px 16px -4px;
   }
 
-  #social .button-icon {
+  :root:not([data-theme='light']) #social .button-icon {
     filter: invert(1) brightness(2);
   }
+}
+
+:root[data-theme='dark'] {
+  --text: #a49e8f;
+  --text-h: #f2efe4;
+  --bg: #201f1a;
+  --page-bg: #161511;
+  --border: #363329;
+  --code-bg: #26241d;
+  --accent: #2fbfa8;
+  --accent-bg: rgba(47, 191, 168, 0.14);
+  --accent-border: rgba(47, 191, 168, 0.45);
+  --social-bg: rgba(47, 48, 58, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.4) 0 1px 2px, rgba(0, 0, 0, 0.3) 0 8px 16px -4px;
+}
+
+:root[data-theme='dark'] #social .button-icon {
+  filter: invert(1) brightness(2);
 }
 
 #root {

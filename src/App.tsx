@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
+import { applyTheme, getInitialTheme, type Theme } from './lib/theme'
 import { DailyTasks } from './features/dailyTasks/DailyTasks'
 import { Sidebar } from './features/sidebar/Sidebar'
 import './App.css'
@@ -8,6 +9,7 @@ import './App.css'
 function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -17,10 +19,19 @@ function App() {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    applyTheme(theme)
+  }, [theme])
+
   return (
     <div className="app-shell">
       {session && sidebarOpen && (
-        <Sidebar session={session} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          session={session}
+          onClose={() => setSidebarOpen(false)}
+          theme={theme}
+          onChangeTheme={setTheme}
+        />
       )}
       <div className={`app${session ? '' : ' app--centered'}`}>
         {session && (
