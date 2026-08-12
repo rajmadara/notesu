@@ -4,6 +4,7 @@ import {
   createTask,
   deleteTask,
   getAllTasks,
+  setTaskCategory,
   setTaskPriority,
   setTaskStatus,
   setTaskTitle,
@@ -74,6 +75,11 @@ export function DailyTasks() {
     await refresh()
   }
 
+  async function handleChangeCategory(task: Task, category: string) {
+    await setTaskCategory(task.id, category)
+    await refresh()
+  }
+
   async function handleDelete(task: Task) {
     await deleteTask(task.id)
     await refresh()
@@ -108,7 +114,7 @@ export function DailyTasks() {
           className="daily-tasks__add-title"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Add a task..."
+          placeholder="Add a title to your Notes..."
         />
         <input
           type="text"
@@ -124,7 +130,23 @@ export function DailyTasks() {
             <option key={category} value={category} />
           ))}
         </datalist>
-        <button type="submit">Add</button>
+        <button type="submit" className="daily-tasks__add-btn" aria-label="Add task">
+          <span className="daily-tasks__add-btn-label">Add</span>
+          <svg
+            className="daily-tasks__add-btn-icon"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
       </form>
 
       <div className="daily-tasks__stats">
@@ -134,7 +156,7 @@ export function DailyTasks() {
             className={`daily-tasks__category${activeCategory === null ? ' is-active' : ''}`}
             onClick={() => setActiveCategory(null)}
           >
-            All tags
+            All
           </button>
           {categories.map((category) => (
             <button
@@ -173,7 +195,9 @@ export function DailyTasks() {
             <TaskItem
               key={task.id}
               task={task}
+              categories={categories}
               onToggleDone={handleToggleDone}
+              onChangeCategory={handleChangeCategory}
               onDelete={handleDelete}
               onSelect={(t) => setSelectedTaskId(t.id)}
             />

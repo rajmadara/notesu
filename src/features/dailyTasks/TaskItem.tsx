@@ -3,23 +3,54 @@ import type { Task } from '../../lib/types'
 
 interface Props {
   task: Task
+  categories: string[]
   onToggleDone: (task: Task) => void
+  onChangeCategory: (task: Task, category: string) => void
   onDelete: (task: Task) => void
   onSelect: (task: Task) => void
 }
 
-export function TaskItem({ task, onToggleDone, onDelete, onSelect }: Props) {
+export function TaskItem({
+  task,
+  categories,
+  onToggleDone,
+  onChangeCategory,
+  onDelete,
+  onSelect,
+}: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [view, setView] = useState<'main' | 'tag'>('main')
+  const [newTag, setNewTag] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) closeMenu()
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [menuOpen])
+
+  function closeMenu() {
+    setMenuOpen(false)
+    setView('main')
+    setNewTag('')
+  }
+
+  function applyTag(category: string) {
+    closeMenu()
+    if (category !== (task.category ?? '')) onChangeCategory(task, category)
+  }
+
+  function handleNewTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const value = newTag.trim()
+    if (value) applyTag(value)
+  }
+
+  const current = task.category?.trim() ?? ''
 
   return (
     <li className={`task-item task-item--${task.status} task-item--priority-${task.priority}`}>
@@ -45,11 +76,7 @@ export function TaskItem({ task, onToggleDone, onDelete, onSelect }: Props) {
           )}
         </button>
 
-        <span
-          className="task-item__title"
-          onClick={() => onSelect(task)}
-          title="Click for details"
-        >
+        <span className="task-item__title" onClick={() => onSelect(task)} title="Click for details">
           {task.title}
         </span>
 
@@ -57,7 +84,7 @@ export function TaskItem({ task, onToggleDone, onDelete, onSelect }: Props) {
           <button
             type="button"
             className="task-item__menu-trigger"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
             aria-label="Task options"
             aria-expanded={menuOpen}
           >
@@ -68,19 +95,72 @@ export function TaskItem({ task, onToggleDone, onDelete, onSelect }: Props) {
             </svg>
           </button>
 
-          {menuOpen && (
+          {menuOpen && view === 'main' && (
             <div className="task-item__menu-dropdown">
               {/* More options land here in future. */}
               <button
                 type="button"
+                className="task-item__menu-item"
+                onClick={() => setView('tag')}
+              >
+                Tag
+                <span className="task-item__menu-value">{current || 'None'}</span>
+              </button>
+              <button
+                type="button"
                 className="task-item__menu-item task-item__menu-item--danger"
                 onClick={() => {
-                  setMenuOpen(false)
+                  closeMenu()
                   onDelete(task)
                 }}
               >
                 Delete
               </button>
+            </div>
+          )}
+
+          {menuOpen && view === 'tag' && (
+            <div className="task-item__menu-dropdown">
+              <button
+                type="button"
+                className="task-item__menu-back"
+                onClick={() => setView('main')}
+              >
+                <span aria-hidden="true">&lsaquo;</span> Tag
+              </button>
+
+              <div className="task-item__menu-list">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`task-item__menu-item${category === current ? ' is-selected' : ''}`}
+                    onClick={() => applyTag(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+                {current && (
+                  <button
+                    type="button"
+                    className="task-item__menu-item task-item__menu-item--muted"
+                    onClick={() => applyTag('')}
+                  >
+                    Remove tag
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="text"
+                className="task-item__menu-input"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={handleNewTagKeyDown}
+                placeholder="New tag..."
+                aria-label="New tag"
+                autoFocus
+              />
             </div>
           )}
         </div>

@@ -40,6 +40,7 @@ export interface TaskStore {
   setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void>
   setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void>
   setTaskTags(userId: string, id: number, tags: string): Promise<void>
+  setTaskCategory(userId: string, id: number, category: string): Promise<void>
   startTaskTimer(userId: string, id: number): Promise<number>
   stopTaskTimer(userId: string, id: number): Promise<void>
   resetTaskTimer(userId: string, id: number): Promise<void>

@@ -71,6 +71,15 @@ export function createTasksRouter(store: TaskStore): Router {
   )
 
   router.put(
+    '/:id/category',
+    asyncHandler(async (req, res) => {
+      const category = String(req.body.category ?? '').trim()
+      await store.setTaskCategory(req.userId, Number(req.params.id), category)
+      res.status(204).end()
+    }),
+  )
+
+  router.put(
     '/:id/tags',
     asyncHandler(async (req, res) => {
       const tags = String(req.body.tags ?? '')

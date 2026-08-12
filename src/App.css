@@ -349,16 +349,16 @@
 
 .daily-tasks__add {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .daily-tasks__add input {
-  height: 46px;
+  height: 42px;
   box-sizing: border-box;
-  padding: 0 16px;
+  padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   font: inherit;
   font-size: 15px;
   background: var(--bg);
@@ -373,7 +373,7 @@
 }
 
 .daily-tasks__add-category {
-  width: 150px;
+  width: 120px;
   flex-shrink: 0;
 }
 
@@ -383,12 +383,16 @@
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
-.daily-tasks__add button {
-  height: 46px;
+.daily-tasks__add-btn {
+  height: 42px;
+  flex-shrink: 0;
   box-sizing: border-box;
-  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -399,13 +403,19 @@
   transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
-.daily-tasks__add button:hover {
+.daily-tasks__add-btn:hover {
   filter: brightness(1.08);
   box-shadow: 0 4px 12px var(--accent-bg);
 }
 
-.daily-tasks__add button:active {
+.daily-tasks__add-btn:active {
   transform: translateY(1px);
+}
+
+/* The word "Add" gives way to a + on phones, where the row has no
+   spare width for it. */
+.daily-tasks__add-btn-icon {
+  display: none;
 }
 
 .daily-tasks__empty {
@@ -548,7 +558,7 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  min-width: 140px;
+  min-width: 180px;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -558,7 +568,10 @@
 }
 
 .task-item__menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
@@ -574,6 +587,74 @@
 
 .task-item__menu-item:hover {
   background: var(--page-bg);
+}
+
+.task-item__menu-item.is-selected {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.task-item__menu-item--muted {
+  color: var(--text);
+}
+
+/* Shows the task's current tag next to the Tag row. */
+.task-item__menu-value {
+  flex-shrink: 0;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.task-item__menu-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px 8px;
+  margin-bottom: 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.task-item__menu-back:hover {
+  color: var(--text-h);
+}
+
+.task-item__menu-list {
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.task-item__menu-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--page-bg);
+  color: var(--text-h);
+  outline: none;
+}
+
+.task-item__menu-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .task-item__menu-item--danger {
@@ -1134,29 +1215,27 @@
     height: 30px;
   }
 
-  /* Three controls don't fit on one phone-width row — title takes its own
-     line, category and Add share the next. */
+  /* All three controls stay on one row; the button drops its label and
+     becomes a square + so the title keeps usable width. */
   .daily-tasks__add {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .daily-tasks__add-title {
-    flex: 1 0 100%;
+    gap: 6px;
   }
 
   .daily-tasks__add-category {
-    flex: 1;
-    width: auto;
+    width: 88px;
   }
 
-  .daily-tasks__add input,
-  .daily-tasks__add button {
-    height: 42px;
+  .daily-tasks__add-btn {
+    width: 42px;
+    padding: 0;
   }
 
-  .daily-tasks__add button {
-    padding: 0 18px;
+  .daily-tasks__add-btn-label {
+    display: none;
+  }
+
+  .daily-tasks__add-btn-icon {
+    display: block;
   }
 
   .notes-editor__toolbar {

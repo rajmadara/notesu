@@ -84,6 +84,13 @@ export async function setTaskPriority(
   })
 }
 
+export async function setTaskCategory(id: number, category: string): Promise<void> {
+  await request<void>(`/${id}/category`, {
+    method: 'PUT',
+    body: JSON.stringify({ category }),
+  })
+}
+
 export async function getNotesForTask(taskId: number): Promise<Note[]> {
   return request<Note[]>(`/${taskId}/notes`)
 }
