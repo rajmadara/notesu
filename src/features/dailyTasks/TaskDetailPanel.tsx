@@ -6,9 +6,10 @@ import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-  { value: 'default', label: 'Default' },
-  { value: 'amber', label: 'Amber' },
-  { value: 'red', label: 'Red' },
+  { value: 'urgent_important', label: 'Urgent & important' },
+  { value: 'urgent_not_important', label: 'Urgent, not important' },
+  { value: 'important_not_urgent', label: 'Important, not urgent' },
+  { value: 'none', label: 'None' },
 ]
 
 interface Props {
@@ -153,16 +154,18 @@ export function TaskDetailPanel({ task, onClose, onDelete, onChangePriority, onR
 
           <div className="task-detail-panel__field">
             <label className="task-detail-panel__label">Priority</label>
-            <div className="task-item__priority-picker">
+            <div className="priority-picker">
               {PRIORITY_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  className={`task-item__priority-swatch task-item__priority-swatch--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
+                  className={`priority-option priority-option--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
                   onClick={() => onChangePriority(task, option.value)}
-                  title={option.label}
-                  aria-label={`Set priority to ${option.label}`}
-                />
+                  aria-pressed={task.priority === option.value}
+                >
+                  <span className="priority-option__dot" aria-hidden="true" />
+                  {option.label}
+                </button>
               ))}
             </div>
           </div>

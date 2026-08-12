@@ -1,5 +1,9 @@
 export type TaskStatus = 'not_started' | 'in_progress' | 'done'
-export type TaskPriority = 'default' | 'amber' | 'red'
+export type TaskPriority =
+  | 'urgent_important'
+  | 'urgent_not_important'
+  | 'important_not_urgent'
+  | 'none'
 
 export interface Task {
   id: number
@@ -11,6 +15,7 @@ export interface Task {
   created_at: number
   priority: TaskPriority
   tags: string
+  category: string
   user_id: string
 }
 
@@ -29,7 +34,7 @@ export interface Note {
 // accidentally return or mutate another user's data.
 export interface TaskStore {
   getAllTasks(userId: string): Promise<Task[]>
-  createTask(userId: string, title: string): Promise<Task>
+  createTask(userId: string, title: string, category: string): Promise<Task>
   deleteTask(userId: string, id: number): Promise<void>
   setTaskTitle(userId: string, id: number, title: string): Promise<void>
   setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void>

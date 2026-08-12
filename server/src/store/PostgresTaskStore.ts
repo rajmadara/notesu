@@ -14,7 +14,12 @@ pg.types.setTypeParser(20, (val: string) => parseInt(val, 10))
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations')
 
-const MIGRATIONS = ['0001_init.sql', '0002_add_user_id.sql']
+const MIGRATIONS = [
+  '0001_init.sql',
+  '0002_add_user_id.sql',
+  '0003_add_category.sql',
+  '0004_eisenhower_priority.sql',
+]
 
 async function applyMigrations(pool: pg.Pool) {
   await pool.query(`
@@ -50,11 +55,12 @@ export class PostgresTaskStore implements TaskStore {
     return rows
   }
 
-  async createTask(userId: string, title: string): Promise<Task> {
+  async createTask(userId: string, title: string, category: string): Promise<Task> {
     const today = new Date().toISOString().slice(0, 10)
     const { rows } = await this.pool.query<Task>(
-      "INSERT INTO tasks (title, date, priority, user_id) VALUES ($1, $2, 'default', $3) RETURNING *",
-      [title, today, userId],
+      `INSERT INTO tasks (title, date, priority, user_id, category)
+       VALUES ($1, $2, 'none', $3, $4) RETURNING *`,
+      [title, today, userId, category],
     )
     return rows[0]
   }

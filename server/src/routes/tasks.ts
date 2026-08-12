@@ -26,7 +26,8 @@ export function createTasksRouter(store: TaskStore): Router {
         res.status(400).json({ error: 'title is required' })
         return
       }
-      res.status(201).json(await store.createTask(req.userId, title))
+      const category = String(req.body.category ?? '').trim()
+      res.status(201).json(await store.createTask(req.userId, title, category))
     }),
   )
 

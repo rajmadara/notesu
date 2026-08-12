@@ -46,8 +46,11 @@ export async function getAllTasks(): Promise<Task[]> {
   return request<Task[]>('')
 }
 
-export async function createTask(title: string): Promise<Task> {
-  return request<Task>('', { method: 'POST', body: JSON.stringify({ title }) })
+export async function createTask(title: string, category: string): Promise<Task> {
+  return request<Task>('', {
+    method: 'POST',
+    body: JSON.stringify({ title, category }),
+  })
 }
 
 export async function deleteTask(id: number): Promise<void> {

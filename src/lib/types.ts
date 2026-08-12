@@ -1,5 +1,9 @@
 export type TaskStatus = 'not_started' | 'in_progress' | 'done'
-export type TaskPriority = 'default' | 'amber' | 'red'
+export type TaskPriority =
+  | 'urgent_important'
+  | 'urgent_not_important'
+  | 'important_not_urgent'
+  | 'none'
 
 export interface Task {
   id: number
@@ -11,6 +15,7 @@ export interface Task {
   created_at: number
   priority: TaskPriority
   tags: string
+  category: string
 }
 
 export interface Note {

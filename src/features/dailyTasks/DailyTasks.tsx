@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type { Task, TaskPriority } from '../../lib/types'
 import {
   createTask,
@@ -16,11 +16,29 @@ const TaskDetailPanel = lazy(() =>
   import('./TaskDetailPanel').then((m) => ({ default: m.TaskDetailPanel })),
 )
 
+/**
+ * Categories aren't stored separately — they're whatever distinct values are
+ * in use, ordered by the newest task carrying each one, so the one you reached
+ * for most recently comes first.
+ */
+function categoriesByRecentUse(tasks: Task[]): string[] {
+  const newest = new Map<string, number>()
+  for (const task of tasks) {
+    const category = task.category?.trim()
+    if (!category) continue
+    const seen = newest.get(category) ?? 0
+    if (task.created_at > seen) newest.set(category, task.created_at)
+  }
+  return [...newest.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name)
+}
+
 export function DailyTasks() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTitle, setNewTitle] = useState('')
+  const [newCategory, setNewCategory] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
 
   async function refresh() {
     const rows = await getAllTasks()
@@ -36,7 +54,7 @@ export function DailyTasks() {
     e.preventDefault()
     const title = newTitle.trim()
     if (!title) return
-    await createTask(title)
+    await createTask(title, newCategory.trim())
     setNewTitle('')
     await refresh()
   }
@@ -61,8 +79,23 @@ export function DailyTasks() {
     await refresh()
   }
 
-  const doneCount = tasks.filter((t) => t.status === 'done').length
-  const sortedTasks = [...tasks].sort(
+  const categories = useMemo(() => categoriesByRecentUse(tasks), [tasks])
+
+  // A filtered-away category shouldn't leave the list stuck showing nothing.
+  useEffect(() => {
+    if (activeCategory && !categories.includes(activeCategory)) {
+      setActiveCategory(null)
+    }
+  }, [categories, activeCategory])
+
+  const visibleTasks = activeCategory
+    ? tasks.filter((t) => t.category?.trim() === activeCategory)
+    : tasks
+
+  const doneCount = visibleTasks.filter((t) => t.status === 'done').length
+  const donePercent =
+    visibleTasks.length === 0 ? 0 : Math.round((doneCount / visibleTasks.length) * 100)
+  const sortedTasks = [...visibleTasks].sort(
     (a, b) => Number(a.status === 'done') - Number(b.status === 'done'),
   )
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null
@@ -72,23 +105,68 @@ export function DailyTasks() {
       <form className="daily-tasks__add" onSubmit={handleAddTask}>
         <input
           type="text"
+          className="daily-tasks__add-title"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="Add a task..."
         />
+        <input
+          type="text"
+          className="daily-tasks__add-category"
+          list="task-categories"
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="Tag"
+          aria-label="Tag"
+        />
+        <datalist id="task-categories">
+          {categories.map((category) => (
+            <option key={category} value={category} />
+          ))}
+        </datalist>
         <button type="submit">Add</button>
       </form>
 
       <div className="daily-tasks__stats">
+        <div className="daily-tasks__categories">
+          <button
+            type="button"
+            className={`daily-tasks__category${activeCategory === null ? ' is-active' : ''}`}
+            onClick={() => setActiveCategory(null)}
+          >
+            All tags
+          </button>
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={`daily-tasks__category${activeCategory === category ? ' is-active' : ''}`}
+              onClick={() =>
+                setActiveCategory((current) => (current === category ? null : category))
+              }
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
         <span className="daily-tasks__count">
-          {tasks.length === 0 ? 'No tasks yet' : `${doneCount} / ${tasks.length} done`}
+          {visibleTasks.length === 0
+            ? 'No tasks yet'
+            : `${doneCount} of ${visibleTasks.length} done · ${donePercent}%`}
         </span>
+      </div>
+
+      <div className="daily-tasks__progress" role="presentation">
+        <span className="daily-tasks__progress-fill" style={{ width: `${donePercent}%` }} />
       </div>
 
       {loading ? (
         <p className="daily-tasks__empty">Loading...</p>
-      ) : tasks.length === 0 ? (
-        <p className="daily-tasks__empty">No tasks yet.</p>
+      ) : sortedTasks.length === 0 ? (
+        <p className="daily-tasks__empty">
+          {activeCategory ? `No tasks in ${activeCategory}.` : 'No tasks yet.'}
+        </p>
       ) : (
         <ul className="task-list">
           {sortedTasks.map((task) => (
