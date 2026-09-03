@@ -7,8 +7,11 @@ interface Props {
   /** Name of the item this task belongs to, if any — shown as a chip. */
   itemName?: string
   showArchivedBadge?: boolean
+  /** View-only collaborators get the row without its controls. */
+  readOnly?: boolean
   onToggleDone: (task: Task) => void
-  onToggleArchive: (task: Task) => void
+  /** Omitted inside an item, where archiving isn't offered. */
+  onToggleArchive?: (task: Task) => void
   onDelete: (task: Task) => void
   onSelect: (task: Task) => void
   onOpenItem?: (itemId: number) => void
@@ -18,6 +21,7 @@ export function TaskItem({
   task,
   itemName,
   showArchivedBadge = false,
+  readOnly = false,
   onToggleDone,
   onToggleArchive,
   onDelete,
@@ -42,7 +46,8 @@ export function TaskItem({
         <button
           type="button"
           className={`task-item__checkbox${task.status === 'done' ? ' task-item__checkbox--done' : ''}`}
-          onClick={() => onToggleDone(task)}
+          onClick={() => !readOnly && onToggleDone(task)}
+          disabled={readOnly}
           title={task.status === 'done' ? 'Mark as not started' : 'Mark as done'}
           aria-label="Toggle task done"
         >
@@ -85,7 +90,7 @@ export function TaskItem({
           <span className={`due-chip is-${dueTone(task.due_date)}`}>{dueLabel(task.due_date)}</span>
         )}
 
-        <div className="task-item__menu" ref={menuRef}>
+        <div className="task-item__menu" ref={menuRef} hidden={readOnly}>
           <button
             type="button"
             className="task-item__menu-trigger"
@@ -102,16 +107,18 @@ export function TaskItem({
 
           {menuOpen && (
             <div className="task-item__menu-dropdown">
-              <button
-                type="button"
-                className="task-item__menu-item"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onToggleArchive(task)
-                }}
-              >
-                {task.archived ? 'Unarchive' : 'Archive'}
-              </button>
+              {onToggleArchive && (
+                <button
+                  type="button"
+                  className="task-item__menu-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onToggleArchive(task)
+                  }}
+                >
+                  {task.archived ? 'Unarchive' : 'Archive'}
+                </button>
+              )}
               <button
                 type="button"
                 className="task-item__menu-item task-item__menu-item--danger"

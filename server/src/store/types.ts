@@ -56,7 +56,7 @@ export interface Item {
   created_at: number
 }
 
-export type PageKind = 'overview' | 'notes' | 'checklist' | 'itinerary' | 'people'
+export type PageKind = 'overview' | 'notes' | 'tasks' | 'itinerary' | 'people'
 
 export interface Page {
   id: number
@@ -279,6 +279,9 @@ export interface TaskStore {
 
   // --- Tasks scoped to an item (readable by anyone the item is shared with) ---
   getItemTasks(userId: string, itemId: number): Promise<Task[]>
+  /** Task notes reached through item access, so collaborators can use them. */
+  getItemTaskNotes(userId: string, taskId: number): Promise<Note[]>
+  upsertItemTaskNote(userId: string, taskId: number, content: string): Promise<Note>
   createPageTask(userId: string, pageId: number, title: string, dueDate: string | null): Promise<Task>
   updateItemTask(userId: string, taskId: number, patch: TaskPatch): Promise<void>
   deleteItemTask(userId: string, taskId: number): Promise<void>

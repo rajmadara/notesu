@@ -8,7 +8,7 @@ function asyncHandler(handler: RequestHandler): RequestHandler {
   }
 }
 
-const PAGE_KINDS: PageKind[] = ['overview', 'notes', 'checklist', 'itinerary', 'people']
+const PAGE_KINDS: PageKind[] = ['overview', 'notes', 'tasks', 'itinerary', 'people']
 const PERMISSIONS: SharePermission[] = ['view', 'edit']
 const STATUSES: TaskStatus[] = ['not_started', 'in_progress', 'done']
 const PRIORITIES: TaskPriority[] = [
@@ -257,6 +257,21 @@ export function createWorkspaceRouter(store: TaskStore): Router {
             dateOrNull(req.body?.due_date),
           ),
         )
+    }),
+  )
+
+  router.get(
+    '/tasks/:id/notes',
+    asyncHandler(async (req, res) => {
+      res.json(await store.getItemTaskNotes(req.userId, id(req.params.id)))
+    }),
+  )
+
+  router.put(
+    '/tasks/:id/notes',
+    asyncHandler(async (req, res) => {
+      const content = str(req.body?.content, 200_000)
+      res.json(await store.upsertItemTaskNote(req.userId, id(req.params.id), content))
     }),
   )
 

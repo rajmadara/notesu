@@ -53,7 +53,7 @@ export interface Item {
   created_at: number
 }
 
-export type PageKind = 'overview' | 'notes' | 'checklist' | 'itinerary' | 'people'
+export type PageKind = 'overview' | 'notes' | 'tasks' | 'itinerary' | 'people'
 
 export interface Page {
   id: number

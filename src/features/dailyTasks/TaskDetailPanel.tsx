@@ -19,6 +19,13 @@ interface Props {
   onChangePriority: (task: Task, priority: TaskPriority) => void
   onChangeDueDate: (task: Task, dueDate: string | null) => void
   onRename: (task: Task, title: string) => void
+  /**
+   * How notes are read and written. Defaults to the personal task endpoints;
+   * a task inside an item passes the workspace ones, which authorise through
+   * the item so collaborators can use them too.
+   */
+  loadNotes?: (taskId: number) => Promise<Note[]>
+  saveNotes?: (taskId: number, content: string) => Promise<Note>
 }
 
 export function TaskDetailPanel({
@@ -28,6 +35,8 @@ export function TaskDetailPanel({
   onChangePriority,
   onChangeDueDate,
   onRename,
+  loadNotes = getNotesForTask,
+  saveNotes = upsertTaskNote,
 }: Props) {
   const [titleValue, setTitleValue] = useState(task.title)
   const [notes, setNotes] = useState('')
@@ -47,12 +56,12 @@ export function TaskDetailPanel({
 
   useEffect(() => {
     if (notesLoaded) return
-    getNotesForTask(task.id).then((rows) => {
+    loadNotes(task.id).then((rows) => {
       setNotes(rows[0]?.content ?? '')
       setNote(rows[0] ?? null)
       setNotesLoaded(true)
     })
-  }, [notesLoaded, task.id])
+  }, [notesLoaded, task.id, loadNotes])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -72,7 +81,7 @@ export function TaskDetailPanel({
   }
 
   async function handleNotesBlur() {
-    const saved = await upsertTaskNote(task.id, notes)
+    const saved = await saveNotes(task.id, notes)
     setNote(saved)
   }
 
@@ -97,7 +106,7 @@ export function TaskDetailPanel({
       const html = plainTextToHtml(transformed)
       setPreviousNotes(notes)
       setNotes(html)
-      const saved = await upsertTaskNote(task.id, html)
+      const saved = await saveNotes(task.id, html)
       setNote(saved)
     } catch (error) {
       setAiError(error instanceof Error ? error.message : 'AI request failed.')
@@ -111,7 +120,7 @@ export function TaskDetailPanel({
     const restored = previousNotes
     setPreviousNotes(null)
     setNotes(restored)
-    const saved = await upsertTaskNote(task.id, restored)
+    const saved = await saveNotes(task.id, restored)
     setNote(saved)
   }
 

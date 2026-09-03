@@ -8,7 +8,7 @@ import { ListChecks, Route, FileText, Users } from 'lucide-react'
 const PAGE_ICONS: Record<PageKind, typeof FileText> = {
   overview: FileText,
   notes: FileText,
-  checklist: ListChecks,
+  tasks: ListChecks,
   itinerary: Route,
   people: Users,
 }

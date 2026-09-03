@@ -4,6 +4,7 @@ import type {
   ItemDetail,
   ItemReadView,
   ItemShare,
+  Note,
   Page,
   PageEntry,
   PageKind,
@@ -83,6 +84,12 @@ export interface ItemTaskPatch {
 export const updateItemTask = (id: number, patch: ItemTaskPatch) =>
   request<void>(`/tasks/${id}`, put(patch))
 export const deleteItemTask = (id: number) => request<void>(`/tasks/${id}`, del)
+
+// Authorised through the item, so collaborators on a shared item can use the
+// detail panel's notes too.
+export const getItemTaskNotes = (id: number) => request<Note[]>(`/tasks/${id}/notes`)
+export const upsertItemTaskNote = (id: number, content: string) =>
+  request<Note>(`/tasks/${id}/notes`, put({ content }))
 
 // --- Itinerary entries ---
 

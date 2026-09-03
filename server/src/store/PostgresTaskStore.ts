@@ -53,6 +53,7 @@ const MIGRATIONS = [
   '0008_spaces_items_pages.sql',
   '0009_item_icons.sql',
   '0010_space_shares.sql',
+  '0011_tasks_page_kind.sql',
 ]
 
 /** Most-permissive wins when someone holds both a space and an item share. */
@@ -66,7 +67,7 @@ function bestPermission(...grants: (string | null)[]): 'edit' | 'view' | null {
 // front page and can't be removed; the rest are ordinary pages.
 const STARTER_PAGES: { name: string; kind: PageKind }[] = [
   { name: 'Overview', kind: 'overview' },
-  { name: 'Checklist', kind: 'checklist' },
+  { name: 'Tasks', kind: 'tasks' },
   { name: 'Notes', kind: 'notes' },
 ]
 
@@ -138,7 +139,7 @@ export class PostgresTaskStore implements TaskStore {
         // Put it on the item's task list rather than leaving it loose on the
         // item, so it shows up where someone would go looking for it.
         const { rows } = await this.pool.query<{ id: number }>(
-          `SELECT id FROM pages WHERE item_id = $1 AND kind = 'checklist'
+          `SELECT id FROM pages WHERE item_id = $1 AND kind = 'tasks'
            ORDER BY position, id LIMIT 1`,
           [itemId],
         )
@@ -624,6 +625,42 @@ export class PostgresTaskStore implements TaskStore {
       return { access: 'owner', ownerId: userId, itemId: 0 }
     }
     return this.itemAccess(userId, task.item_id)
+  }
+
+  /**
+   * Notes on a task belonging to an item. Authorised through the item rather
+   * than task ownership, so someone editing a shared item can use them — the
+   * personal getNotesForTask filters on tasks.user_id and would find nothing.
+   */
+  async getItemTaskNotes(userId: string, taskId: number): Promise<Note[]> {
+    await this.taskAccess(userId, taskId)
+    const { rows } = await this.pool.query<Note>(
+      'SELECT * FROM notes WHERE task_id = $1 ORDER BY created_at ASC',
+      [taskId],
+    )
+    return rows
+  }
+
+  async upsertItemTaskNote(userId: string, taskId: number, content: string): Promise<Note> {
+    this.requireWrite(await this.taskAccess(userId, taskId))
+    const now = Math.floor(Date.now() / 1000)
+    const existing = await this.pool.query<Note>(
+      'SELECT * FROM notes WHERE task_id = $1 ORDER BY created_at ASC LIMIT 1',
+      [taskId],
+    )
+    if (existing.rows[0]) {
+      const { rows } = await this.pool.query<Note>(
+        'UPDATE notes SET content = $1, updated_at = $2 WHERE id = $3 RETURNING *',
+        [content, now, existing.rows[0].id],
+      )
+      return rows[0]
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    const { rows } = await this.pool.query<Note>(
+      'INSERT INTO notes (task_id, content, date, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
+      [taskId, content, today, now],
+    )
+    return rows[0]
   }
 
   async updateItemTask(userId: string, taskId: number, patch: TaskPatch): Promise<void> {

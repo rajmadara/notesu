@@ -15,7 +15,7 @@ function Prose({ html }: { html: string }) {
 }
 
 function PageSection({ page }: { page: ReadPage }) {
-  if (page.kind === 'checklist') {
+  if (page.kind === 'tasks') {
     if (page.tasks.length === 0) return null
     const done = page.tasks.filter((t) => t.done).length
     return (
@@ -121,7 +121,7 @@ export function ReadView({ view }: Props) {
   const sections = pages.filter((p) => p.kind !== 'overview')
   const hasBody = sections.some(
     (p) =>
-      (p.kind === 'checklist' && p.tasks.length > 0) ||
+      (p.kind === 'tasks' && p.tasks.length > 0) ||
       (p.kind === 'itinerary' && p.entries.length > 0) ||
       (p.kind === 'people' && p.people.length > 0) ||
       (p.kind === 'notes' && p.content.trim()),
