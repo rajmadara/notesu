@@ -51,6 +51,14 @@ function dateOrNull(value: unknown): string | null {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
 }
 
+/** Normalised share recipient, or null when it isn't a usable address. */
+function shareEmail(value: unknown): string | null {
+  const email = String(value ?? '')
+    .trim()
+    .toLowerCase()
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null
+}
+
 export function createWorkspaceRouter(store: TaskStore): Router {
   const router = Router()
 
@@ -60,6 +68,13 @@ export function createWorkspaceRouter(store: TaskStore): Router {
     '/spaces',
     asyncHandler(async (req, res) => {
       res.json(await store.getSpaces(req.userId))
+    }),
+  )
+
+  router.get(
+    '/spaces/shared',
+    asyncHandler(async (req, res) => {
+      res.json(await store.getSharedSpaces(req.userId))
     }),
   )
 
@@ -82,6 +97,36 @@ export function createWorkspaceRouter(store: TaskStore): Router {
     '/spaces/:id',
     asyncHandler(async (req, res) => {
       await store.deleteSpace(req.userId, id(req.params.id))
+      res.status(204).end()
+    }),
+  )
+
+  router.get(
+    '/spaces/:id/shares',
+    asyncHandler(async (req, res) => {
+      res.json(await store.getSpaceShares(req.userId, id(req.params.id)))
+    }),
+  )
+
+  router.post(
+    '/spaces/:id/shares',
+    asyncHandler(async (req, res) => {
+      const email = shareEmail(req.body?.email)
+      if (!email) {
+        res.status(400).json({ error: 'Enter a valid email address' })
+        return
+      }
+      const permission: SharePermission = PERMISSIONS.includes(req.body?.permission)
+        ? req.body.permission
+        : 'view'
+      res.status(201).json(await store.shareSpace(req.userId, id(req.params.id), email, permission))
+    }),
+  )
+
+  router.delete(
+    '/space-shares/:id',
+    asyncHandler(async (req, res) => {
+      await store.unshareSpace(req.userId, id(req.params.id))
       res.status(204).end()
     }),
   )
@@ -118,6 +163,18 @@ export function createWorkspaceRouter(store: TaskStore): Router {
         return
       }
       res.json(detail)
+    }),
+  )
+
+  router.get(
+    '/items/:id/read',
+    asyncHandler(async (req, res) => {
+      const view = await store.getItemReadView(req.userId, id(req.params.id))
+      if (!view) {
+        res.status(404).json({ error: 'Item not found' })
+        return
+      }
+      res.json(view)
     }),
   )
 
@@ -329,10 +386,8 @@ export function createWorkspaceRouter(store: TaskStore): Router {
   router.post(
     '/items/:id/shares',
     asyncHandler(async (req, res) => {
-      const email = String(req.body?.email ?? '')
-        .trim()
-        .toLowerCase()
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const email = shareEmail(req.body?.email)
+      if (!email) {
         res.status(400).json({ error: 'Enter a valid email address' })
         return
       }

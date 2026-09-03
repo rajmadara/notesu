@@ -1,35 +1,56 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { ItemShare, SharePermission } from '../../lib/types'
-import { getItemShares, shareItem, unshareItem } from '../../lib/workspace'
+import type { SharePermission } from '../../lib/types'
+import {
+  getItemShares,
+  getSpaceShares,
+  shareItem,
+  shareSpace,
+  unshareItem,
+  unshareSpace,
+} from '../../lib/workspace'
+
+/** One row of the list, whichever kind of thing is being shared. */
+interface Share {
+  id: number
+  email: string
+  permission: SharePermission
+}
 
 interface Props {
-  itemId: number
-  itemName: string
+  /** A space share cascades to every item inside it. */
+  kind: 'space' | 'item'
+  id: number
+  name: string
   onClose: () => void
   onChanged: () => void
 }
 
-export function ShareDialog({ itemId, itemName, onClose, onChanged }: Props) {
-  const [shares, setShares] = useState<ItemShare[]>([])
+export function ShareDialog({ kind, id, name, onClose, onChanged }: Props) {
+  const [shares, setShares] = useState<Share[]>([])
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState<SharePermission>('view')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function load() {
-    setShares(await getItemShares(itemId).catch(() => []))
-  }
+  const load = useCallback(async () => {
+    const rows = kind === 'space' ? await getSpaceShares(id) : await getItemShares(id)
+    setShares(rows.map((r) => ({ id: r.id, email: r.email, permission: r.permission })))
+  }, [kind, id])
 
   useEffect(() => {
-    load()
+    load().catch(() => setShares([]))
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId])
+  }, [load, onClose])
+
+  async function grant(to: string, level: SharePermission) {
+    if (kind === 'space') await shareSpace(id, to, level)
+    else await shareItem(id, to, level)
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault()
@@ -38,40 +59,55 @@ export function ShareDialog({ itemId, itemName, onClose, onChanged }: Props) {
     setBusy(true)
     setError(null)
     try {
-      await shareItem(itemId, trimmed, permission)
+      await grant(trimmed, permission)
       setEmail('')
       await load()
       onChanged()
     } catch (err) {
-      setError(err instanceof Error && /400/.test(err.message) ? 'Enter a valid email address.' : 'Could not share. Try again.')
+      setError(
+        err instanceof Error && /400/.test(err.message)
+          ? 'Enter a valid email address.'
+          : 'Could not share. Try again.',
+      )
     } finally {
       setBusy(false)
     }
   }
 
-  async function changePermission(share: ItemShare, next: SharePermission) {
-    await shareItem(itemId, share.email, next).catch(() => null)
+  async function changePermission(share: Share, next: SharePermission) {
+    await grant(share.email, next).catch(() => null)
     await load()
   }
 
-  async function remove(share: ItemShare) {
-    await unshareItem(share.id).catch(() => null)
+  async function remove(share: Share) {
+    const drop = kind === 'space' ? unshareSpace : unshareItem
+    await drop(share.id).catch(() => null)
     await load()
     onChanged()
   }
 
   return (
     <div className="dialog__backdrop" onMouseDown={onClose}>
-      <div className="dialog" role="dialog" aria-modal="true" aria-label={`Share ${itemName}`} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Share ${name}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <header className="dialog__head">
-          <h2 className="dialog__title">Share “{itemName}”</h2>
+          <h2 className="dialog__title">Share “{name}”</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </header>
 
         <p className="dialog__hint">
-          They'll find it under <strong>Shared with me</strong> when they sign in with this email. It stays yours — nothing is copied.
+          They'll find it under <strong>Shared with me</strong> when they sign in with this email.
+          {kind === 'space'
+            ? ' Everything in this space comes with it.'
+            : ' It stays yours — nothing is copied.'}{' '}
+          <strong>Can view</strong> gets a read-only page of the details.
         </p>
 
         <form className="share-form" onSubmit={add}>
@@ -84,7 +120,12 @@ export function ShareDialog({ itemId, itemName, onClose, onChanged }: Props) {
             autoFocus
             aria-label="Email"
           />
-          <select className="input input--select" value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} aria-label="Permission">
+          <select
+            className="input input--select"
+            value={permission}
+            onChange={(e) => setPermission(e.target.value as SharePermission)}
+            aria-label="Permission"
+          >
             <option value="view">Can view</option>
             <option value="edit">Can edit</option>
           </select>
@@ -108,7 +149,13 @@ export function ShareDialog({ itemId, itemName, onClose, onChanged }: Props) {
                   <option value="view">Can view</option>
                   <option value="edit">Can edit</option>
                 </select>
-                <button type="button" className="icon-btn" onClick={() => remove(share)} aria-label={`Stop sharing with ${share.email}`} title="Remove">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => remove(share)}
+                  aria-label={`Stop sharing with ${share.email}`}
+                  title="Remove"
+                >
                   <X size={14} />
                 </button>
               </li>

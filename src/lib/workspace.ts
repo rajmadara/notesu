@@ -2,6 +2,7 @@ import { API_ORIGIN, apiRequest } from './db'
 import type {
   Item,
   ItemDetail,
+  ItemReadView,
   ItemShare,
   Page,
   PageEntry,
@@ -9,7 +10,9 @@ import type {
   Person,
   SharePermission,
   SharedItem,
+  SharedSpace,
   Space,
+  SpaceShare,
   Task,
   TaskPriority,
   TaskStatus,
@@ -28,6 +31,7 @@ const del: RequestInit = { method: 'DELETE' }
 // --- Spaces ---
 
 export const getSpaces = () => request<Space[]>('/spaces')
+export const getSharedSpaces = () => request<SharedSpace[]>('/spaces/shared')
 export const createSpace = (name: string, icon: string) =>
   request<Space>('/spaces', json({ name, icon }))
 export const updateSpace = (id: number, name: string, icon: string) =>
@@ -39,6 +43,7 @@ export const deleteSpace = (id: number) => request<void>(`/spaces/${id}`, del)
 export const getItems = () => request<Item[]>('/items')
 export const getSharedItems = () => request<SharedItem[]>('/items/shared')
 export const getItemDetail = (id: number) => request<ItemDetail>(`/items/${id}`)
+export const getItemReadView = (id: number) => request<ItemReadView>(`/items/${id}/read`)
 export const createItem = (spaceId: number, name: string) =>
   request<Item>(`/spaces/${spaceId}/items`, json({ name }))
 
@@ -115,3 +120,8 @@ export const getItemShares = (itemId: number) => request<ItemShare[]>(`/items/${
 export const shareItem = (itemId: number, email: string, permission: SharePermission) =>
   request<ItemShare>(`/items/${itemId}/shares`, json({ email, permission }))
 export const unshareItem = (shareId: number) => request<void>(`/shares/${shareId}`, del)
+
+export const getSpaceShares = (spaceId: number) => request<SpaceShare[]>(`/spaces/${spaceId}/shares`)
+export const shareSpace = (spaceId: number, email: string, permission: SharePermission) =>
+  request<SpaceShare>(`/spaces/${spaceId}/shares`, json({ email, permission }))
+export const unshareSpace = (shareId: number) => request<void>(`/space-shares/${shareId}`, del)

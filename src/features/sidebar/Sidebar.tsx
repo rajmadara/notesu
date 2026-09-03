@@ -17,7 +17,7 @@ import { NewMenu } from './NewMenu'
 import { EntityIcon } from '../workspace/EntityIcon'
 import { DEFAULT_ITEM_ICON, DEFAULT_SPACE_ICON } from '../../lib/icons'
 import type { Theme } from '../../lib/theme'
-import type { Item, SharedItem, Space } from '../../lib/types'
+import type { Item, SharedItem, SharedSpace, Space } from '../../lib/types'
 import type { Route, TaskView } from '../../App'
 
 const COLLAPSED_SPACES_KEY = 'notesu-collapsed-spaces'
@@ -31,6 +31,7 @@ interface Props {
   onChangeTheme: (theme: Theme) => void
   spaces: Space[]
   items: Item[]
+  sharedSpaces: SharedSpace[]
   sharedItems: SharedItem[]
   route: Route
   view: TaskView
@@ -64,6 +65,7 @@ export function Sidebar({
   onChangeTheme,
   spaces,
   items,
+  sharedSpaces,
   sharedItems,
   route,
   view,
@@ -103,6 +105,10 @@ export function Sidebar({
 
   const isItemActive = (id: number) => route.kind === 'item' && route.itemId === id
   const onTasks = route.kind === 'tasks'
+  // Items reached through a shared space are nested under it; the rest —
+  // shared individually — are listed on their own so nothing appears twice.
+  const sharedSpaceIds = new Set(sharedSpaces.map((s) => s.id))
+  const looseSharedItems = sharedItems.filter((i) => !sharedSpaceIds.has(i.space_id))
 
   /**
    * Drag the right edge to resize. Tracking pointermove on the document (not
@@ -377,27 +383,83 @@ export function Sidebar({
                 })}
               </section>
 
-              {sharedItems.length > 0 && (
+              {(sharedSpaces.length > 0 || looseSharedItems.length > 0) && (
                 <section className="sidebar__section">
                   <div className="sidebar__section-head">
                     <span className="sidebar__section-label">Shared with me</span>
                   </div>
-                  <div className="tree__items tree__items--flat" data-shared>
-                    {sharedItems.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`tree__item tree__item--shared${isItemActive(item.id) ? ' is-active' : ''}`}
-                        onClick={() => onNavigate({ kind: 'item', itemId: item.id, pageId: null })}
-                        title={`Shared by ${item.owner_name}`}
-                      >
-                        <EntityIcon icon={item.icon} fallback={DEFAULT_ITEM_ICON} size={14} />
-                        <span className="tree__item-text">
-                          {item.owner_name.split(' ')[0]}'s {item.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+
+                  {/* A shared space nests its items, exactly like your own. */}
+                  {sharedSpaces.map((space) => {
+                    const spaceItems = sharedItems.filter((i) => i.space_id === space.id)
+                    const open = !collapsedSpaces.has(space.id)
+                    const active = route.kind === 'space' && route.spaceId === space.id
+                    return (
+                      <div key={space.id} className="tree">
+                        <div className={`tree__space${active ? ' is-active' : ''}`}>
+                          <button
+                            type="button"
+                            className="tree__toggle"
+                            onClick={() => toggleSpace(space.id)}
+                            aria-label={open ? `Collapse ${space.name}` : `Expand ${space.name}`}
+                            aria-expanded={open}
+                          >
+                            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                          </button>
+                          <button
+                            type="button"
+                            className="tree__space-name"
+                            onClick={() => onNavigate({ kind: 'space', spaceId: space.id })}
+                            title={`Shared by ${space.owner_name} · can ${space.permission}`}
+                          >
+                            <EntityIcon
+                              icon={space.icon}
+                              fallback={DEFAULT_SPACE_ICON}
+                              size={15}
+                              className="tree__icon"
+                            />
+                            {space.name}
+                          </button>
+                        </div>
+                        {open && (
+                          <div className="tree__items">
+                            {spaceItems.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={`tree__item${isItemActive(item.id) ? ' is-active' : ''}`}
+                                onClick={() => onNavigate({ kind: 'item', itemId: item.id, pageId: null })}
+                              >
+                                <EntityIcon icon={item.icon} fallback={DEFAULT_ITEM_ICON} size={14} />
+                                <span className="tree__item-text">{item.name}</span>
+                              </button>
+                            ))}
+                            {spaceItems.length === 0 && <p className="tree__empty">Nothing here yet</p>}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {/* Items shared on their own, without their space. */}
+                  {looseSharedItems.length > 0 && (
+                    <div className="tree__items tree__items--flat">
+                      {looseSharedItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`tree__item${isItemActive(item.id) ? ' is-active' : ''}`}
+                          onClick={() => onNavigate({ kind: 'item', itemId: item.id, pageId: null })}
+                          title={`Shared by ${item.owner_name}`}
+                        >
+                          <EntityIcon icon={item.icon} fallback={DEFAULT_ITEM_ICON} size={14} />
+                          <span className="tree__item-text">
+                            {item.owner_name.split(' ')[0]}'s {item.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </section>
               )}
 

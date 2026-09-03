@@ -104,10 +104,76 @@ export interface ItemShare {
   created_at: number
 }
 
+export interface SpaceShare {
+  id: number
+  space_id: number
+  owner_id: string
+  email: string
+  permission: SharePermission
+  created_at: number
+}
+
 /** An item someone else shared with the current user. */
 export interface SharedItem extends Item {
   owner_name: string
   permission: SharePermission
+}
+
+/** A whole space someone else shared with the current user. */
+export interface SharedSpace extends Space {
+  owner_name: string
+  permission: SharePermission
+}
+
+// --- The reader view: one readable document, for view-only collaborators ---
+
+/** Deliberately narrow: no user ids, no share lists, no internal columns. */
+export interface ReadTask {
+  id: number
+  title: string
+  done: boolean
+  due_date: string | null
+}
+
+export interface ReadPerson {
+  id: number
+  name: string
+  role: string
+  contact: string
+  note: string
+}
+
+export interface ReadEntry {
+  id: number
+  day: string | null
+  time: string
+  title: string
+  note: string
+}
+
+export interface ReadPage {
+  id: number
+  name: string
+  kind: PageKind
+  content: string
+  tasks: ReadTask[]
+  entries: ReadEntry[]
+  people: ReadPerson[]
+}
+
+export interface ItemReadView {
+  item: {
+    id: number
+    name: string
+    icon: string
+    date: string | null
+    location: string
+    description: string
+  }
+  space: { name: string; icon: string }
+  owner_name: string
+  access: Exclude<ItemAccess, null>
+  pages: ReadPage[]
 }
 
 /**
@@ -188,15 +254,20 @@ export interface TaskStore {
 
   // --- Spaces ---
   getSpaces(userId: string): Promise<Space[]>
+  getSharedSpaces(userId: string): Promise<SharedSpace[]>
   createSpace(userId: string, name: string, icon: string): Promise<Space>
   updateSpace(userId: string, id: number, name: string, icon: string): Promise<void>
   deleteSpace(userId: string, id: number): Promise<void>
+  getSpaceShares(userId: string, spaceId: number): Promise<SpaceShare[]>
+  shareSpace(userId: string, spaceId: number, email: string, permission: SharePermission): Promise<SpaceShare>
+  unshareSpace(userId: string, shareId: number): Promise<void>
 
   // --- Items ---
   getItems(userId: string): Promise<Item[]>
   getSharedItems(userId: string): Promise<SharedItem[]>
   createItem(userId: string, spaceId: number, name: string): Promise<Item>
   getItemDetail(userId: string, itemId: number): Promise<ItemDetail | null>
+  getItemReadView(userId: string, itemId: number): Promise<ItemReadView | null>
   updateItem(userId: string, id: number, patch: ItemPatch): Promise<void>
   deleteItem(userId: string, id: number): Promise<void>
 

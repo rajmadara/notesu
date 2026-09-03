@@ -103,6 +103,69 @@ export interface SharedItem extends Item {
   permission: SharePermission
 }
 
+export interface SharedSpace extends Space {
+  owner_name: string
+  permission: SharePermission
+}
+
+export interface SpaceShare {
+  id: number
+  space_id: number
+  email: string
+  permission: SharePermission
+  created_at: number
+}
+
+// --- Reader view ---
+
+export interface ReadTask {
+  id: number
+  title: string
+  done: boolean
+  due_date: string | null
+}
+
+export interface ReadPerson {
+  id: number
+  name: string
+  role: string
+  contact: string
+  note: string
+}
+
+export interface ReadEntry {
+  id: number
+  day: string | null
+  time: string
+  title: string
+  note: string
+}
+
+export interface ReadPage {
+  id: number
+  name: string
+  kind: PageKind
+  content: string
+  tasks: ReadTask[]
+  entries: ReadEntry[]
+  people: ReadPerson[]
+}
+
+export interface ItemReadView {
+  item: {
+    id: number
+    name: string
+    icon: string
+    date: string | null
+    location: string
+    description: string
+  }
+  space: { name: string; icon: string }
+  owner_name: string
+  access: ItemAccess
+  pages: ReadPage[]
+}
+
 export interface ItemDetail {
   item: Item
   space: Space

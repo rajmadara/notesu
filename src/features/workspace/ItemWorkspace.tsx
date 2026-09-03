@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ellipsis, FileText, ListChecks, Plus, Route, Share2, Trash2, Users, X } from 'lucide-react'
-import type { ItemDetail, Page, PageKind, Task } from '../../lib/types'
+import { BookOpen, Ellipsis, FileText, ListChecks, Pencil, Plus, Route, Share2, Trash2, Users, X } from 'lucide-react'
+import type { ItemDetail, ItemReadView, Page, PageKind, Task } from '../../lib/types'
 import {
   createPage,
   deleteItem,
   deletePage,
   getItemDetail,
+  getItemReadView,
   getItemTasks,
   renamePage,
   updateItem,
   updateItemTask,
   type ItemPatch,
 } from '../../lib/workspace'
+import { ReadView } from './ReadView'
 import { OverviewPage } from './pages/OverviewPage'
 import { NotesPage } from './pages/NotesPage'
 import { ChecklistPage } from './pages/ChecklistPage'
@@ -59,6 +61,10 @@ export function ItemWorkspace({
   const [detail, setDetail] = useState<ItemDetail | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  // View-only collaborators always get the reader; owners and editors can
+  // switch into it to see exactly what those collaborators see.
+  const [reading, setReading] = useState(false)
+  const [readView, setReadView] = useState<ItemReadView | null>(null)
   const [adding, setAdding] = useState(false)
   const [newKind, setNewKind] = useState<PageKind>('notes')
   const [newName, setNewName] = useState('')
@@ -79,8 +85,23 @@ export function ItemWorkspace({
 
   useEffect(() => {
     setLoading(true)
+    setReading(false)
     load()
   }, [load])
+
+  // The reader needs entries and people that the editing pages fetch lazily,
+  // so it comes from its own endpoint — refetched whenever it's opened.
+  const showReader = detail?.access === 'view' || reading
+  useEffect(() => {
+    if (!showReader) return
+    let cancelled = false
+    getItemReadView(itemId)
+      .then((v) => !cancelled && setReadView(v))
+      .catch(() => !cancelled && setReadView(null))
+    return () => {
+      cancelled = true
+    }
+  }, [showReader, itemId, tasks, detail])
 
   useEffect(() => {
     if (addPageNonce > 0) {
@@ -190,6 +211,16 @@ export function ItemWorkspace({
             </span>
           ) : (
             <>
+              <button
+                type="button"
+                className={`btn btn--ghost btn--sm${reading ? ' is-active' : ''}`}
+                onClick={() => setReading((v) => !v)}
+                title={reading ? 'Back to editing' : 'See what view-only people see'}
+                aria-pressed={reading}
+              >
+                {reading ? <Pencil size={14} /> : <BookOpen size={14} />}
+                <span className="workspace__share-label">{reading ? 'Edit' : 'Reader'}</span>
+              </button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setSharing(true)}>
                 <Share2 size={14} /> <span className="workspace__share-label">Share</span>
               </button>
@@ -218,6 +249,14 @@ export function ItemWorkspace({
         </div>
       </HeaderTitle>
 
+      {showReader ? (
+        readView ? (
+          <ReadView view={readView} />
+        ) : (
+          <p className="empty-state">Loading...</p>
+        )
+      ) : (
+        <>
       <nav className="tabs" aria-label="Pages">
         {pages.map((page) => {
           const active = page.id === current?.id
@@ -345,9 +384,17 @@ export function ItemWorkspace({
         {current?.kind === 'itinerary' && <ItineraryPage key={current.id} page={current} readOnly={readOnly} />}
         {current?.kind === 'people' && <PeoplePage key={current.id} page={current} readOnly={readOnly} />}
       </div>
+        </>
+      )}
 
       {sharing && (
-        <ShareDialog itemId={item.id} itemName={item.name} onClose={() => setSharing(false)} onChanged={onItemChanged} />
+        <ShareDialog
+          kind="item"
+          id={item.id}
+          name={item.name}
+          onClose={() => setSharing(false)}
+          onChanged={onItemChanged}
+        />
       )}
     </div>
   )

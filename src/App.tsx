@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { Home as HomeIcon, Menu, Plus, SquareCheck } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from './lib/theme'
-import type { Item, SharedItem, Space, Task } from './lib/types'
+import type { Item, SharedItem, SharedSpace, Space, Task } from './lib/types'
 import { createTask, getAllTasks, searchTasks, setTaskStatus } from './lib/db'
 import {
   createItem,
@@ -11,6 +11,7 @@ import {
   deleteSpace,
   getItems,
   getSharedItems,
+  getSharedSpaces,
   getSpaces,
   updateSpace,
 } from './lib/workspace'
@@ -71,6 +72,7 @@ function App() {
 
   const [spaces, setSpaces] = useState<Space[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [sharedSpaces, setSharedSpaces] = useState<SharedSpace[]>([])
   const [sharedItems, setSharedItems] = useState<SharedItem[]>([])
   // Bumped by "+ New → Page" so the workspace opens its add-page form.
   const [addPageNonce, setAddPageNonce] = useState(0)
@@ -115,13 +117,15 @@ function App() {
   }, [])
 
   const refreshWorkspace = useCallback(async () => {
-    const [nextSpaces, nextItems, nextShared] = await Promise.all([
+    const [nextSpaces, nextItems, nextSharedSpaces, nextShared] = await Promise.all([
       getSpaces(),
       getItems(),
+      getSharedSpaces().catch(() => []),
       getSharedItems().catch(() => []),
     ])
     setSpaces(nextSpaces)
     setItems(nextItems)
+    setSharedSpaces(nextSharedSpaces)
     setSharedItems(nextShared)
   }, [])
 
@@ -191,6 +195,7 @@ function App() {
           onChangeTheme={setTheme}
           spaces={spaces}
           items={items}
+          sharedSpaces={sharedSpaces}
           sharedItems={sharedItems}
           route={route}
           view={view}
@@ -272,12 +277,18 @@ function App() {
             />
           ) : route.kind === 'space' ? (
             (() => {
-              const space = spaces.find((s) => s.id === route.spaceId)
+              const owned = spaces.find((s) => s.id === route.spaceId)
+              const shared = sharedSpaces.find((s) => s.id === route.spaceId)
+              const space = owned ?? shared
               if (!space) return <p className="empty-state">That space is gone.</p>
+              // Someone else's space: no renaming, sharing or deleting, and
+              // view-only people can't add items either.
+              const permission = owned ? 'owner' : (shared?.permission ?? 'view')
               return (
                 <SpacePage
                   space={space}
-                  items={items.filter((i) => i.space_id === space.id)}
+                  permission={permission}
+                  items={(owned ? items : sharedItems).filter((i) => i.space_id === space.id)}
                   tasks={tasks}
                   onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}
                   onCreateItem={async (name) => {

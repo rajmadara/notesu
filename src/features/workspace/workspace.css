@@ -92,7 +92,8 @@
   border-color: var(--border);
 }
 
-.btn--ghost:not(:disabled):hover {
+.btn--ghost:not(:disabled):hover,
+.btn--ghost.is-active {
   color: var(--accent);
   border-color: var(--accent-border);
   background: var(--accent-bg);
@@ -1033,6 +1034,273 @@
   background: var(--accent-bg);
 }
 
+/* ---------- Reader view ----------
+   What a view-only collaborator sees: the item as one readable document,
+   set a little wider and softer than the editing surface. */
+
+.read {
+  max-width: 640px;
+  padding-bottom: 40px;
+}
+
+.read__head {
+  padding-bottom: 22px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.read__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.read__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 0;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text-h);
+}
+
+.read__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 14px;
+}
+
+.read__fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14.5px;
+  color: var(--text-h);
+}
+
+.read__fact svg {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.read__lede {
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.read__section {
+  margin-bottom: 34px;
+}
+
+.read__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+}
+
+.read__count {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.read__prose {
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--text-h);
+}
+
+.read__prose p {
+  margin: 0 0 12px;
+}
+
+.read__prose > :last-child {
+  margin-bottom: 0;
+}
+
+.read__prose ul,
+.read__prose ol {
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.read__prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 2px;
+}
+
+.read__prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.read__prose blockquote {
+  margin: 0 0 12px;
+  padding-left: 14px;
+  border-left: 3px solid var(--border);
+  color: var(--text);
+}
+
+.read__checklist,
+.read__people,
+.read__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.read__check {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.read__check:last-child {
+  border-bottom: none;
+}
+
+.read__check-box {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  color: #fff;
+}
+
+.read__check.is-done .read__check-box {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.read__check-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.read__check.is-done .read__check-title {
+  color: var(--text);
+  text-decoration: line-through;
+}
+
+.read__day {
+  margin-bottom: 20px;
+}
+
+.read__day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.read__day-date {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.read__timeline {
+  position: relative;
+}
+
+.read__timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 63px;
+  width: 1px;
+  background: var(--border);
+}
+
+.read__event {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 5px 0;
+}
+
+.read__event-time {
+  width: 52px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.read__event-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg);
+  position: relative;
+  z-index: 1;
+}
+
+.read__event-title {
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.read__person {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.read__person:last-child {
+  border-bottom: none;
+}
+
+.read__person-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.read__person-role {
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.read__person-contact {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text);
+}
+
 /* ---------- Notes page ---------- */
 
 .page-editor .tiptap {
@@ -1955,6 +2223,23 @@
 
   .header-title {
     font-size: 16px;
+  }
+
+  .read__title {
+    font-size: 24px;
+  }
+
+  .read__timeline::before {
+    left: 55px;
+  }
+
+  .read__event-time {
+    width: 44px;
+  }
+
+  .read__person-contact {
+    margin-left: 0;
+    flex-basis: 100%;
   }
 
   .dialog__backdrop {

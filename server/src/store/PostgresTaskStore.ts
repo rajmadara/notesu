@@ -10,6 +10,7 @@ import type {
   ItemAccess,
   ItemDetail,
   ItemPatch,
+  ItemReadView,
   ItemShare,
   Note,
   Page,
@@ -17,9 +18,13 @@ import type {
   PageKind,
   Person,
   PersonPatch,
+  ReadEntry,
+  ReadPerson,
   SharePermission,
   SharedItem,
+  SharedSpace,
   Space,
+  SpaceShare,
   Task,
   TaskPatch,
   TaskPriority,
@@ -47,7 +52,15 @@ const MIGRATIONS = [
   '0007_rename_personal_space.sql',
   '0008_spaces_items_pages.sql',
   '0009_item_icons.sql',
+  '0010_space_shares.sql',
 ]
+
+/** Most-permissive wins when someone holds both a space and an item share. */
+function bestPermission(...grants: (string | null)[]): 'edit' | 'view' | null {
+  if (grants.includes('edit')) return 'edit'
+  if (grants.includes('view')) return 'view'
+  return null
+}
 
 // Every new item starts with these. Overview is special — it's the item's
 // front page and can't be removed; the rest are ordinary pages.
@@ -313,22 +326,54 @@ export class PostgresTaskStore implements TaskStore {
    * it (matched by the email they signed in with). Everything below funnels
    * through this, so sharing can't leak an item to anyone else.
    */
+  /**
+   * The single place access is resolved. A share on the item's parent space
+   * cascades to the item, and if someone holds both, the more permissive one
+   * wins. Everything below funnels through here, so sharing can't leak.
+   */
   private async itemAccess(userId: string, itemId: number): Promise<Access> {
-    const { rows } = await this.pool.query<{ user_id: string; permission: string | null }>(
+    const { rows } = await this.pool.query<{
+      user_id: string
+      item_permission: string | null
+      space_permission: string | null
+    }>(
       `SELECT i.user_id,
               (SELECT s.permission FROM item_shares s
-                WHERE s.item_id = i.id
-                  AND s.email = (SELECT lower(email) FROM auth.users WHERE id = $2)) AS permission
-       FROM items i WHERE i.id = $1`,
+                WHERE s.item_id = i.id AND s.email = me.email) AS item_permission,
+              (SELECT sp.permission FROM space_shares sp
+                WHERE sp.space_id = i.space_id AND sp.email = me.email) AS space_permission
+       FROM items i
+       CROSS JOIN (SELECT lower(email) AS email FROM auth.users WHERE id = $2) me
+       WHERE i.id = $1`,
       [itemId, userId],
     )
     const row = rows[0]
     if (!row) throw notFound('Item')
     if (row.user_id === userId) return { access: 'owner', ownerId: row.user_id, itemId }
-    if (row.permission === 'edit' || row.permission === 'view') {
-      return { access: row.permission, ownerId: row.user_id, itemId }
-    }
-    throw notFound('Item')
+    const granted = bestPermission(row.item_permission, row.space_permission)
+    if (!granted) throw notFound('Item')
+    return { access: granted, ownerId: row.user_id, itemId }
+  }
+
+  /** The same resolution, for operations that act on a space itself. */
+  private async spaceAccess(
+    userId: string,
+    spaceId: number,
+  ): Promise<{ access: 'owner' | 'edit' | 'view'; ownerId: string }> {
+    const { rows } = await this.pool.query<{ user_id: string; permission: string | null }>(
+      `SELECT s.user_id,
+              (SELECT sp.permission FROM space_shares sp
+                WHERE sp.space_id = s.id
+                  AND sp.email = (SELECT lower(email) FROM auth.users WHERE id = $2)) AS permission
+       FROM spaces s WHERE s.id = $1`,
+      [spaceId, userId],
+    )
+    const row = rows[0]
+    if (!row) throw notFound('Space')
+    if (row.user_id === userId) return { access: 'owner', ownerId: row.user_id }
+    const granted = bestPermission(row.permission)
+    if (!granted) throw notFound('Space')
+    return { access: granted, ownerId: row.user_id }
   }
 
   private async pageAccess(userId: string, pageId: number): Promise<Access & { page: Page }> {
@@ -356,12 +401,12 @@ export class PostgresTaskStore implements TaskStore {
     return this.pageAccess(userId, rows[0].page_id)
   }
 
-  private requireWrite<T extends Access>(access: T): T {
+  private requireWrite<T extends { access: string }>(access: T): T {
     if (access.access === 'view') throw forbidden()
     return access
   }
 
-  private requireOwner<T extends Access>(access: T): T {
+  private requireOwner<T extends { access: string }>(access: T): T {
     if (access.access !== 'owner') throw forbidden('Only the owner can do this')
     return access
   }
@@ -371,6 +416,20 @@ export class PostgresTaskStore implements TaskStore {
   async getSpaces(userId: string): Promise<Space[]> {
     const { rows } = await this.pool.query<Space>(
       'SELECT * FROM spaces WHERE user_id = $1 ORDER BY position, id',
+      [userId],
+    )
+    return rows
+  }
+
+  async getSharedSpaces(userId: string): Promise<SharedSpace[]> {
+    const { rows } = await this.pool.query<SharedSpace>(
+      `SELECT s.*, sh.permission, ${OWNER_NAME_SQL} AS owner_name
+       FROM space_shares sh
+       JOIN spaces s ON s.id = sh.space_id
+       JOIN auth.users u ON u.id = s.user_id
+       WHERE sh.email = (SELECT lower(email) FROM auth.users WHERE id = $1)
+         AND s.user_id <> $1
+       ORDER BY s.name, s.id`,
       [userId],
     )
     return rows
@@ -407,35 +466,45 @@ export class PostgresTaskStore implements TaskStore {
     return rows
   }
 
+  /**
+   * Items reachable through a share — either shared directly, or sitting in a
+   * shared space. The sidebar nests the ones whose space is also shared and
+   * lists the rest flat.
+   */
   async getSharedItems(userId: string): Promise<SharedItem[]> {
     const { rows } = await this.pool.query<SharedItem>(
-      `SELECT i.*, s.permission, ${OWNER_NAME_SQL} AS owner_name
-       FROM item_shares s
-       JOIN items i ON i.id = s.item_id
+      `SELECT i.*, ${OWNER_NAME_SQL} AS owner_name,
+              CASE WHEN ish.permission = 'edit' OR ssh.permission = 'edit'
+                   THEN 'edit' ELSE 'view' END AS permission
+       FROM items i
        JOIN auth.users u ON u.id = i.user_id
-       WHERE s.email = (SELECT lower(email) FROM auth.users WHERE id = $1)
-       ORDER BY i.name, i.id`,
+       CROSS JOIN (SELECT lower(email) AS email FROM auth.users WHERE id = $1) me
+       LEFT JOIN item_shares ish ON ish.item_id = i.id AND ish.email = me.email
+       LEFT JOIN space_shares ssh ON ssh.space_id = i.space_id AND ssh.email = me.email
+       WHERE (ish.id IS NOT NULL OR ssh.id IS NOT NULL) AND i.user_id <> $1
+       ORDER BY i.space_id, i.position, i.id`,
       [userId],
     )
     return rows
   }
 
   async createItem(userId: string, spaceId: number, name: string): Promise<Item> {
+    // Anyone who can edit the space can add to it; the item belongs to the
+    // space's owner, so it lands in their tree rather than the editor's.
+    const { ownerId } = this.requireWrite(await this.spaceAccess(userId, spaceId))
     return this.transaction(async (client) => {
       const { rows } = await client.query<Item>(
         `INSERT INTO items (space_id, user_id, name, position)
-         SELECT $1, $2, $3,
-                COALESCE((SELECT MAX(position) + 1 FROM items WHERE space_id = $1), 0)
-         WHERE EXISTS (SELECT 1 FROM spaces WHERE id = $1 AND user_id = $2)
+         VALUES ($1, $2, $3,
+                 COALESCE((SELECT MAX(position) + 1 FROM items WHERE space_id = $1), 0))
          RETURNING *`,
-        [spaceId, userId, name],
+        [spaceId, ownerId, name],
       )
       const item = rows[0]
-      if (!item) throw notFound('Space')
       for (const [index, page] of STARTER_PAGES.entries()) {
         await client.query(
           'INSERT INTO pages (item_id, user_id, name, kind, position) VALUES ($1, $2, $3, $4, $5)',
-          [item.id, userId, page.name, page.kind, index],
+          [item.id, ownerId, page.name, page.kind, index],
         )
       }
       return item
@@ -705,5 +774,139 @@ export class PostgresTaskStore implements TaskStore {
       shareId,
       userId,
     ])
+  }
+
+  async getSpaceShares(userId: string, spaceId: number): Promise<SpaceShare[]> {
+    this.requireOwner(await this.spaceAccess(userId, spaceId))
+    const { rows } = await this.pool.query<SpaceShare>(
+      'SELECT * FROM space_shares WHERE space_id = $1 ORDER BY created_at',
+      [spaceId],
+    )
+    return rows
+  }
+
+  async shareSpace(
+    userId: string,
+    spaceId: number,
+    email: string,
+    permission: SharePermission,
+  ): Promise<SpaceShare> {
+    this.requireOwner(await this.spaceAccess(userId, spaceId))
+    const { rows } = await this.pool.query<SpaceShare>(
+      `INSERT INTO space_shares (space_id, owner_id, email, permission)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (space_id, email) DO UPDATE SET permission = EXCLUDED.permission
+       RETURNING *`,
+      [spaceId, userId, email.trim().toLowerCase(), permission],
+    )
+    return rows[0]
+  }
+
+  async unshareSpace(userId: string, shareId: number): Promise<void> {
+    await this.pool.query('DELETE FROM space_shares WHERE id = $1 AND owner_id = $2', [
+      shareId,
+      userId,
+    ])
+  }
+
+  /**
+   * Everything an item's reader view needs, in one round trip and with the
+   * fields listed explicitly — no user ids, no share lists, nothing internal
+   * that a spread of the raw rows would quietly carry along.
+   */
+  async getItemReadView(userId: string, itemId: number): Promise<ItemReadView | null> {
+    let access: Access
+    try {
+      access = await this.itemAccess(userId, itemId)
+    } catch {
+      return null
+    }
+
+    const { rows: itemRows } = await this.pool.query<{
+      id: number
+      name: string
+      icon: string
+      date: string | null
+      location: string
+      description: string
+      space_name: string
+      space_icon: string
+      owner_name: string
+    }>(
+      `SELECT i.id, i.name, i.icon, i.date, i.location, i.description,
+              sp.name AS space_name, sp.icon AS space_icon,
+              ${OWNER_NAME_SQL} AS owner_name
+       FROM items i
+       JOIN spaces sp ON sp.id = i.space_id
+       JOIN auth.users u ON u.id = i.user_id
+       WHERE i.id = $1`,
+      [itemId],
+    )
+    const row = itemRows[0]
+    if (!row) return null
+
+    const { rows: pages } = await this.pool.query<Page>(
+      'SELECT * FROM pages WHERE item_id = $1 ORDER BY position, id',
+      [itemId],
+    )
+    const { rows: tasks } = await this.pool.query<{
+      id: number
+      page_id: number | null
+      title: string
+      status: TaskStatus
+      due_date: string | null
+    }>(
+      `SELECT id, page_id, title, status, due_date FROM tasks
+       WHERE item_id = $1 AND archived = false ORDER BY created_at`,
+      [itemId],
+    )
+    // Columns listed explicitly — page_entries carries a user_id that must
+    // not travel with the payload.
+    const { rows: entries } = await this.pool.query<ReadEntry & { page_id: number }>(
+      `SELECT e.id, e.page_id, e.day, e.time, e.title, e.note
+       FROM page_entries e JOIN pages p ON p.id = e.page_id
+       WHERE p.item_id = $1 ORDER BY e.day NULLS LAST, e.time, e.position, e.id`,
+      [itemId],
+    )
+    const { rows: people } = await this.pool.query<ReadPerson & { page_id: number }>(
+      `SELECT pe.id, pe.page_id, pe.name, pe.role, pe.contact, pe.note
+       FROM people pe JOIN pages p ON p.id = pe.page_id
+       WHERE p.item_id = $1 ORDER BY pe.position, pe.id`,
+      [itemId],
+    )
+
+    return {
+      item: {
+        id: row.id,
+        name: row.name,
+        icon: row.icon,
+        date: row.date,
+        location: row.location,
+        description: row.description,
+      },
+      space: { name: row.space_name, icon: row.space_icon },
+      owner_name: row.owner_name,
+      access: access.access,
+      pages: pages.map((page) => ({
+        id: page.id,
+        name: page.name,
+        kind: page.kind,
+        content: page.content,
+        tasks: tasks
+          .filter((t) => t.page_id === page.id)
+          .map((t) => ({
+            id: t.id,
+            title: t.title,
+            done: t.status === 'done',
+            due_date: t.due_date,
+          })),
+        entries: entries
+          .filter((e) => e.page_id === page.id)
+          .map(({ id, day, time, title, note }) => ({ id, day, time, title, note })),
+        people: people
+          .filter((p) => p.page_id === page.id)
+          .map(({ id, name, role, contact, note }) => ({ id, name, role, contact, note })),
+      })),
+    }
   }
 }
