@@ -1,15 +1,17 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import type { Task, TaskPriority } from '../../lib/types'
+import { lazy, Suspense, useState } from 'react'
+import type { Item, Task, TaskPriority } from '../../lib/types'
+import type { TaskView } from '../../App'
 import {
   createTask,
   deleteTask,
-  getAllTasks,
-  setTaskCategory,
+  setTaskArchived,
+  setTaskDueDate,
   setTaskPriority,
   setTaskStatus,
   setTaskTitle,
 } from '../../lib/db'
 import { TaskItem } from './TaskItem'
+import { HeaderTitle } from '../shell/HeaderSlot'
 
 // The panel pulls in the rich-text editor (~600kB), which nothing else needs —
 // loading it on first open keeps it out of the initial page bundle.
@@ -17,177 +19,152 @@ const TaskDetailPanel = lazy(() =>
   import('./TaskDetailPanel').then((m) => ({ default: m.TaskDetailPanel })),
 )
 
-/**
- * Categories aren't stored separately — they're whatever distinct values are
- * in use, ordered by the newest task carrying each one, so the one you reached
- * for most recently comes first.
- */
-function categoriesByRecentUse(tasks: Task[]): string[] {
-  const newest = new Map<string, number>()
-  for (const task of tasks) {
-    const category = task.category?.trim()
-    if (!category) continue
-    const seen = newest.get(category) ?? 0
-    if (task.created_at > seen) newest.set(category, task.created_at)
-  }
-  return [...newest.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name)
+interface Props {
+  tasks: Task[]
+  loading: boolean
+  items: Item[]
+  view: TaskView
+  searchResults: Task[] | null
+  onRefresh: () => Promise<void>
+  onOpenItem: (itemId: number) => void
 }
 
-export function DailyTasks() {
-  const [tasks, setTasks] = useState<Task[]>([])
+export function DailyTasks({ tasks, loading, items, view, searchResults, onRefresh, onOpenItem }: Props) {
   const [newTitle, setNewTitle] = useState('')
-  const [newCategory, setNewCategory] = useState('')
-  const [loading, setLoading] = useState(true)
+  // '' = no item, so the task lands in the plain Tasks list.
+  const [newItemId, setNewItemId] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-
-  async function refresh() {
-    const rows = await getAllTasks()
-    setTasks(rows)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    refresh()
-  }, [])
 
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault()
     const title = newTitle.trim()
     if (!title) return
-    await createTask(title, newCategory.trim())
+    await createTask(title, newItemId ? Number(newItemId) : null)
     setNewTitle('')
-    await refresh()
+    await onRefresh()
+  }
+
+  async function handleChangeDueDate(task: Task, dueDate: string | null) {
+    await setTaskDueDate(task.id, dueDate)
+    await onRefresh()
   }
 
   async function handleToggleDone(task: Task) {
     await setTaskStatus(task.id, task.status === 'done' ? 'not_started' : 'done')
-    await refresh()
+    await onRefresh()
   }
 
   async function handleChangePriority(task: Task, priority: TaskPriority) {
     await setTaskPriority(task.id, priority)
-    await refresh()
+    await onRefresh()
   }
 
   async function handleRename(task: Task, title: string) {
     await setTaskTitle(task.id, title)
-    await refresh()
+    await onRefresh()
   }
 
-  async function handleChangeCategory(task: Task, category: string) {
-    await setTaskCategory(task.id, category)
-    await refresh()
+  async function handleToggleArchive(task: Task) {
+    await setTaskArchived(task.id, !task.archived)
+    await onRefresh()
   }
 
   async function handleDelete(task: Task) {
     await deleteTask(task.id)
-    await refresh()
+    await onRefresh()
   }
 
-  const categories = useMemo(() => categoriesByRecentUse(tasks), [tasks])
+  const searching = searchResults !== null
+  const archived = view === 'archived'
 
-  // A filtered-away category shouldn't leave the list stuck showing nothing.
-  useEffect(() => {
-    if (activeCategory && !categories.includes(activeCategory)) {
-      setActiveCategory(null)
-    }
-  }, [categories, activeCategory])
-
-  const visibleTasks = activeCategory
-    ? tasks.filter((t) => t.category?.trim() === activeCategory)
-    : tasks
-
+  const visibleTasks = tasks.filter((t) => t.archived === archived)
   const doneCount = visibleTasks.filter((t) => t.status === 'done').length
   const donePercent =
     visibleTasks.length === 0 ? 0 : Math.round((doneCount / visibleTasks.length) * 100)
-  const sortedTasks = [...visibleTasks].sort(
+  const sortedTasks = (searching ? [...searchResults] : [...visibleTasks]).sort(
     (a, b) => Number(a.status === 'done') - Number(b.status === 'done'),
   )
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null
 
   return (
     <div className="daily-tasks">
-      <form className="daily-tasks__add" onSubmit={handleAddTask}>
-        <input
-          type="text"
-          className="daily-tasks__add-title"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Add a title to your Notes..."
-        />
-        <input
-          type="text"
-          className="daily-tasks__add-category"
-          list="task-categories"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          placeholder="Tag"
-          aria-label="Tag"
-        />
-        <datalist id="task-categories">
-          {categories.map((category) => (
-            <option key={category} value={category} />
-          ))}
-        </datalist>
-        <button type="submit" className="daily-tasks__add-btn" aria-label="Add task">
-          <span className="daily-tasks__add-btn-label">Add</span>
-          <svg
-            className="daily-tasks__add-btn-icon"
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-      </form>
+      <HeaderTitle>
+        <h1 className="header-title">{searching ? 'Search' : archived ? 'Archived' : 'Tasks'}</h1>
+      </HeaderTitle>
+
+      {!archived && !searching && (
+        <form className="daily-tasks__add" onSubmit={handleAddTask}>
+          <input
+            type="text"
+            className="daily-tasks__add-title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Add a task..."
+          />
+          {/* Picks an existing item to file this under; the task then shows on
+              that item's list too. Items are made in a space, not here. */}
+          {items.length > 0 && (
+            <select
+              className="daily-tasks__add-item"
+              value={newItemId}
+              onChange={(e) => setNewItemId(e.target.value)}
+              aria-label="Item"
+              title="File this task under an item"
+            >
+              <option value="">No item</option>
+              {items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button type="submit" className="daily-tasks__add-btn" aria-label="Add task">
+            <span className="daily-tasks__add-btn-label">Add</span>
+            <svg
+              className="daily-tasks__add-btn-icon"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </form>
+      )}
 
       <div className="daily-tasks__stats">
-        <div className="daily-tasks__categories">
-          <button
-            type="button"
-            className={`daily-tasks__category${activeCategory === null ? ' is-active' : ''}`}
-            onClick={() => setActiveCategory(null)}
-          >
-            All
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              className={`daily-tasks__category${activeCategory === category ? ' is-active' : ''}`}
-              onClick={() =>
-                setActiveCategory((current) => (current === category ? null : category))
-              }
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
+        {searching && <span className="daily-tasks__archived-label">Search results</span>}
         <span className="daily-tasks__count">
-          {visibleTasks.length === 0
-            ? 'No tasks yet'
-            : `${doneCount} of ${visibleTasks.length} done · ${donePercent}%`}
+          {searching
+            ? `${sortedTasks.length} result${sortedTasks.length === 1 ? '' : 's'}`
+            : visibleTasks.length === 0
+              ? 'No tasks yet'
+              : `${doneCount} of ${visibleTasks.length} done · ${donePercent}%`}
         </span>
       </div>
 
-      <div className="daily-tasks__progress" role="presentation">
-        <span className="daily-tasks__progress-fill" style={{ width: `${donePercent}%` }} />
-      </div>
+      {!archived && !searching && (
+        <div className="daily-tasks__progress" role="presentation">
+          <span className="daily-tasks__progress-fill" style={{ width: `${donePercent}%` }} />
+        </div>
+      )}
 
       {loading ? (
         <p className="daily-tasks__empty">Loading...</p>
       ) : sortedTasks.length === 0 ? (
         <p className="daily-tasks__empty">
-          {activeCategory ? `No tasks in ${activeCategory}.` : 'No tasks yet.'}
+          {searching
+            ? 'No matches for your search.'
+            : archived
+              ? 'No archived tasks.'
+              : 'No tasks yet.'}
         </p>
       ) : (
         <ul className="task-list">
@@ -195,11 +172,15 @@ export function DailyTasks() {
             <TaskItem
               key={task.id}
               task={task}
-              categories={categories}
+              itemName={
+                task.item_id !== null ? items.find((i) => i.id === task.item_id)?.name : undefined
+              }
+              showArchivedBadge={searching}
               onToggleDone={handleToggleDone}
-              onChangeCategory={handleChangeCategory}
+              onToggleArchive={handleToggleArchive}
               onDelete={handleDelete}
               onSelect={(t) => setSelectedTaskId(t.id)}
+              onOpenItem={onOpenItem}
             />
           ))}
         </ul>
@@ -211,6 +192,7 @@ export function DailyTasks() {
             task={selectedTask}
             onClose={() => setSelectedTaskId(null)}
             onChangePriority={handleChangePriority}
+            onChangeDueDate={handleChangeDueDate}
             onRename={handleRename}
             onDelete={handleDelete}
           />

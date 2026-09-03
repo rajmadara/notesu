@@ -1,7 +1,7 @@
 import type { Note, Task, TaskPriority, TaskStatus } from './types'
 import { supabase } from './supabase'
 
-const API_ORIGIN = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:3001`
+export const API_ORIGIN = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:3001`
 const API_BASE = `${API_ORIGIN}/api/tasks`
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -30,8 +30,12 @@ export async function formatNote(
   return body?.content ?? ''
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+export async function apiRequest<T>(
+  base: string,
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${base}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     ...options,
   })
@@ -42,14 +46,33 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+function request<T>(path: string, options?: RequestInit): Promise<T> {
+  return apiRequest<T>(API_BASE, path, options)
+}
+
 export async function getAllTasks(): Promise<Task[]> {
   return request<Task[]>('')
 }
 
-export async function createTask(title: string, category: string): Promise<Task> {
+export async function searchTasks(query: string): Promise<Task[]> {
+  return request<Task[]>(`/search?q=${encodeURIComponent(query)}`)
+}
+
+/**
+ * Creates a task. Passing an itemId files it under that item (and onto that
+ * item's task list); without one it lands in the plain Tasks list.
+ */
+export async function createTask(title: string, itemId: number | null = null): Promise<Task> {
   return request<Task>('', {
     method: 'POST',
-    body: JSON.stringify({ title, category }),
+    body: JSON.stringify({ title, item_id: itemId }),
+  })
+}
+
+export async function setTaskDueDate(id: number, dueDate: string | null): Promise<void> {
+  await request<void>(`/${id}/due-date`, {
+    method: 'PUT',
+    body: JSON.stringify({ due_date: dueDate }),
   })
 }
 
@@ -84,10 +107,10 @@ export async function setTaskPriority(
   })
 }
 
-export async function setTaskCategory(id: number, category: string): Promise<void> {
-  await request<void>(`/${id}/category`, {
+export async function setTaskArchived(id: number, archived: boolean): Promise<void> {
+  await request<void>(`/${id}/archive`, {
     method: 'PUT',
-    body: JSON.stringify({ category }),
+    body: JSON.stringify({ archived }),
   })
 }
 

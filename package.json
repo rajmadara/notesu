@@ -12,8 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
-    "@fontsource-variable/manrope": "^5.2.8",
+    "@fontsource-variable/inter": "^5.3.0",
     "@supabase/supabase-js": "^2.112.2",
     "@tiptap/extension-task-item": "^3.29.2",
     "@tiptap/extension-task-list": "^3.29.2",
@@ -21,6 +20,7 @@
     "@tiptap/pm": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
+    "lucide-react": "^1.40.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

@@ -16,7 +16,11 @@ export interface Task {
   priority: TaskPriority
   tags: string
   category: string
+  archived: boolean
   user_id: string
+  due_date: string | null
+  item_id: number | null
+  page_id: number | null
 }
 
 export interface Note {
@@ -28,22 +32,200 @@ export interface Note {
   updated_at: number
 }
 
+// --- Workspace: Space -> Item -> Pages ---
+
+export interface Space {
+  id: number
+  user_id: string
+  name: string
+  icon: string
+  position: number
+  created_at: number
+}
+
+export interface Item {
+  id: number
+  space_id: number
+  user_id: string
+  name: string
+  icon: string
+  date: string | null
+  location: string
+  description: string
+  position: number
+  created_at: number
+}
+
+export type PageKind = 'overview' | 'notes' | 'checklist' | 'itinerary' | 'people'
+
+export interface Page {
+  id: number
+  item_id: number
+  user_id: string
+  name: string
+  kind: PageKind
+  content: string
+  position: number
+  created_at: number
+}
+
+export interface PageEntry {
+  id: number
+  page_id: number
+  user_id: string
+  day: string | null
+  time: string
+  title: string
+  note: string
+  position: number
+  created_at: number
+}
+
+export interface Person {
+  id: number
+  page_id: number
+  user_id: string
+  name: string
+  role: string
+  contact: string
+  note: string
+  position: number
+  created_at: number
+}
+
+export type SharePermission = 'view' | 'edit'
+
+export interface ItemShare {
+  id: number
+  item_id: number
+  owner_id: string
+  email: string
+  permission: SharePermission
+  created_at: number
+}
+
+/** An item someone else shared with the current user. */
+export interface SharedItem extends Item {
+  owner_name: string
+  permission: SharePermission
+}
+
+/**
+ * What the caller may do with an item. 'owner' and 'edit' can write; 'view'
+ * can only read; null means the item doesn't exist for this user at all.
+ */
+export type ItemAccess = 'owner' | 'edit' | 'view' | null
+
+/** Everything a workspace needs to open in one round trip. */
+export interface ItemDetail {
+  item: Item
+  space: Space
+  pages: Page[]
+  access: Exclude<ItemAccess, null>
+  owner_name: string
+}
+
+export interface ItemPatch {
+  name?: string
+  icon?: string
+  date?: string | null
+  location?: string
+  description?: string
+}
+
+export interface TaskPatch {
+  title?: string
+  status?: TaskStatus
+  priority?: TaskPriority
+  due_date?: string | null
+}
+
+export interface EntryPatch {
+  day?: string | null
+  time?: string
+  title?: string
+  note?: string
+}
+
+export interface PersonPatch {
+  name?: string
+  role?: string
+  contact?: string
+  note?: string
+}
+
+export interface CreateTaskOptions {
+  category?: string
+  due_date?: string | null
+  item_id?: number | null
+  page_id?: number | null
+}
+
 // Storage-agnostic contract. Implement this once per backend (Postgres/Supabase
 // today, something else later) and the routes layer never has to change.
 // Every method takes the caller's userId first, so no implementation can
 // accidentally return or mutate another user's data.
 export interface TaskStore {
   getAllTasks(userId: string): Promise<Task[]>
-  createTask(userId: string, title: string, category: string): Promise<Task>
+  searchTasks(userId: string, query: string): Promise<Task[]>
+  createTask(userId: string, title: string, options: CreateTaskOptions): Promise<Task>
   deleteTask(userId: string, id: number): Promise<void>
   setTaskTitle(userId: string, id: number, title: string): Promise<void>
   setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void>
   setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void>
   setTaskTags(userId: string, id: number, tags: string): Promise<void>
   setTaskCategory(userId: string, id: number, category: string): Promise<void>
+  setTaskArchived(userId: string, id: number, archived: boolean): Promise<void>
+  setTaskDueDate(userId: string, id: number, dueDate: string | null): Promise<void>
   startTaskTimer(userId: string, id: number): Promise<number>
   stopTaskTimer(userId: string, id: number): Promise<void>
   resetTaskTimer(userId: string, id: number): Promise<void>
   getNotesForTask(userId: string, taskId: number): Promise<Note[]>
   upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note>
+  getFavoriteTags(userId: string): Promise<string[]>
+  addFavoriteTag(userId: string, name: string): Promise<void>
+  removeFavoriteTag(userId: string, name: string): Promise<void>
+
+  // --- Spaces ---
+  getSpaces(userId: string): Promise<Space[]>
+  createSpace(userId: string, name: string, icon: string): Promise<Space>
+  updateSpace(userId: string, id: number, name: string, icon: string): Promise<void>
+  deleteSpace(userId: string, id: number): Promise<void>
+
+  // --- Items ---
+  getItems(userId: string): Promise<Item[]>
+  getSharedItems(userId: string): Promise<SharedItem[]>
+  createItem(userId: string, spaceId: number, name: string): Promise<Item>
+  getItemDetail(userId: string, itemId: number): Promise<ItemDetail | null>
+  updateItem(userId: string, id: number, patch: ItemPatch): Promise<void>
+  deleteItem(userId: string, id: number): Promise<void>
+
+  // --- Pages ---
+  createPage(userId: string, itemId: number, name: string, kind: PageKind): Promise<Page>
+  renamePage(userId: string, id: number, name: string): Promise<void>
+  setPageContent(userId: string, id: number, content: string): Promise<void>
+  deletePage(userId: string, id: number): Promise<void>
+
+  // --- Tasks scoped to an item (readable by anyone the item is shared with) ---
+  getItemTasks(userId: string, itemId: number): Promise<Task[]>
+  createPageTask(userId: string, pageId: number, title: string, dueDate: string | null): Promise<Task>
+  updateItemTask(userId: string, taskId: number, patch: TaskPatch): Promise<void>
+  deleteItemTask(userId: string, taskId: number): Promise<void>
+
+  // --- Itinerary entries ---
+  getPageEntries(userId: string, pageId: number): Promise<PageEntry[]>
+  createPageEntry(userId: string, pageId: number, entry: Required<EntryPatch>): Promise<PageEntry>
+  updatePageEntry(userId: string, id: number, patch: EntryPatch): Promise<void>
+  deletePageEntry(userId: string, id: number): Promise<void>
+
+  // --- People ---
+  getPeople(userId: string, pageId: number): Promise<Person[]>
+  createPerson(userId: string, pageId: number, person: Required<PersonPatch>): Promise<Person>
+  updatePerson(userId: string, id: number, patch: PersonPatch): Promise<void>
+  deletePerson(userId: string, id: number): Promise<void>
+
+  // --- Sharing ---
+  getItemShares(userId: string, itemId: number): Promise<ItemShare[]>
+  shareItem(userId: string, itemId: number, email: string, permission: SharePermission): Promise<ItemShare>
+  unshareItem(userId: string, shareId: number): Promise<void>
 }

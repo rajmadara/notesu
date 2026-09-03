@@ -1,167 +1,256 @@
+/* ---------- Shell ---------- */
+
 .app-shell {
-  /* The detail panel's left edge is derived from these, so it always lands
-     exactly where the task list ends. Change them here, not in place.
-     The sidebar is an overlay drawer, so its width is NOT part of that sum. */
+  /* The task detail panel's left edge is derived from these, so it always
+     lands exactly where the task list ends. --sidebar-width is set inline
+     from React (App.tsx) since it varies with collapsed state on desktop. */
   --sidebar-width: 260px;
-  --app-padding-x: 24px;
+  --app-padding-x: 28px;
   --content-max: 720px;
   --panel-gap: 32px;
 
+  display: flex;
   min-height: 100svh;
 }
 
+/* Desktop: no overlay at all — the sidebar is a normal, always-visible flex
+   child. This block only comes alive under the mobile media query below. */
 .sidebar__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 27, 18, 0.35);
-  z-index: 30;
-  display: flex;
-  justify-content: flex-start;
-  animation: sidebar-fade-in 0.15s ease;
-}
-
-@keyframes sidebar-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  display: none;
 }
 
 .sidebar {
   width: var(--sidebar-width);
-  max-width: 82%;
-  height: 100%;
+  flex-shrink: 0;
+  /* Pinned to the viewport and scrolled internally, so a long tree scrolls
+     on its own instead of stretching the whole page. */
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 20px 16px;
+  padding: 14px 12px 12px;
   background: var(--page-bg);
   border-right: 1px solid var(--border);
-  box-shadow: 8px 0 24px rgba(30, 27, 18, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  animation: sidebar-slide-in 0.2s ease;
+  gap: 14px;
+  overflow: hidden;
+  transition: width 0.2s ease, padding 0.2s ease;
 }
 
-@keyframes sidebar-slide-in {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.sidebar.is-collapsed {
+  padding: 14px 8px;
 }
 
-.sidebar__account {
+/* Width follows the pointer during a drag, so the eased transition has to
+   step aside or every frame lags behind the cursor. */
+.sidebar.is-resizing {
+  transition: none;
+  user-select: none;
+}
+
+.sidebar__resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  z-index: 2;
+  cursor: col-resize;
+  background: none;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar__resize:hover,
+.sidebar.is-resizing .sidebar__resize {
+  background: var(--accent-border);
+}
+
+/* ---------- Sidebar: collapsed rail ---------- */
+
+.sidebar-rail {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.sidebar__avatar {
-  width: 32px;
-  height: 32px;
-  box-sizing: border-box;
-  border-radius: 50%;
-  flex-shrink: 0;
-  object-fit: cover;
-}
-
-.sidebar__avatar--fallback {
+.sidebar-rail__brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
-.sidebar__name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-h);
+.sidebar-rail__divider {
+  width: 24px;
+  height: 1px;
+  margin: 6px 0;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-rail__icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-rail__icon:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.sidebar-rail__icon.is-active {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* ---------- Sidebar: expanded ---------- */
+
+.sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 0 6px;
+}
+
+/* The brand is a button: it's how you get Home. */
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  padding: 3px 6px;
+  margin-left: -6px;
+  border: none;
+  border-radius: 8px;
+  color: var(--accent);
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar__brand:hover,
+.sidebar__brand.is-active {
+  background: var(--accent-bg);
+}
+
+.sidebar-rail__brand {
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-rail__brand:hover,
+.sidebar-rail__brand.is-active {
+  background: var(--accent-bg);
+}
+
+.sidebar__brand-text {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-h);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.app__logo-accent {
+  color: var(--accent);
+}
+
 .sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .sidebar__nav-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 10px;
+  height: 32px;
+  padding: 0 10px;
   border: none;
   border-radius: 8px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
-  color: var(--text);
+  color: var(--text-h);
   background: none;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar__nav-item svg {
+  color: var(--text);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
 }
 
 .sidebar__nav-item:hover {
   background: var(--accent-bg);
+}
+
+.sidebar__nav-item.is-active {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.sidebar__nav-item.is-active svg,
+.sidebar__nav-item:hover svg {
   color: var(--accent);
 }
 
+.sidebar__section-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 10px;
   border-top: 1px solid var(--border);
 }
 
-.theme-toggle {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-}
-
-.theme-toggle__option {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 30px;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 7px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
-  background: none;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.theme-toggle__option:hover {
-  color: var(--text-h);
-}
-
-.theme-toggle__option.is-active {
-  background: var(--accent);
-  color: #fff;
-}
+/* ---------- Main pane ---------- */
 
 .app {
+  flex: 1;
+  min-width: 0;
   min-height: 100svh;
   box-sizing: border-box;
-  padding: 20px var(--app-padding-x) 32px;
+  padding: 12px var(--app-padding-x) 40px;
   text-align: left;
   background: var(--bg);
 }
@@ -171,14 +260,21 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 24px;
+  flex-shrink: 0;
+  /* Negative inline margins cancel .app's padding so the rule runs edge to
+     edge like a real toolbar, instead of floating inset from the content. */
+  margin: 0 calc(var(--app-padding-x) * -1) 28px;
+  padding: 0 var(--app-padding-x) 9px;
+  border-bottom: 1px solid var(--border);
 }
 
 .app__menu-btn {
-  width: 34px;
-  height: 34px;
+  /* Desktop: the sidebar is always visible with its own collapse toggle, so
+     this has no job to do there — it only reappears on mobile. */
+  display: none;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
-  display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -195,20 +291,277 @@
   color: var(--accent);
 }
 
-.app__menu-btn svg {
-  display: block;
+/* Where am I? The current page portals its heading in here. */
+.app__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.app__header h1 {
-  font-family: var(--heading);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.6px;
+.header-title {
+  min-width: 0;
   margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-title--input {
+  flex: 1;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: none;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.header-title--input:hover:not(:read-only) {
+  background: var(--page-bg);
+}
+
+.header-title--input:focus:not(:read-only) {
+  border-color: var(--accent-border);
+  background: var(--bg);
+}
+
+/* Title plus a small trailing note, sharing a baseline. */
+.header-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-sub {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* The space icon in the header doubles as the "change icon" control. */
+.header-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.header-icon-btn:hover,
+.header-icon-btn[aria-expanded='true'] {
+  background: var(--accent-bg);
+}
+
+.app__header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.app__search-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Only exists on a phone, where the box collapses to this. */
+.app__search-toggle {
+  display: none;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-h);
+  background: none;
+  cursor: pointer;
+}
+
+.app__search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  width: min(280px, 48vw);
+  /* Shrinkable, so a narrow header compresses the search rather than
+     overflowing and widening the whole page. */
+  flex-shrink: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  /* Tinted and flat rather than white-on-white with a shadow — it sits back
+     into the toolbar instead of floating above it. */
+  background: var(--page-bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.app__search:focus-within {
+  border-color: var(--accent-border);
+  background: var(--bg);
+}
+
+.app__search-icon {
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+.app__search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
   color: var(--text-h);
 }
 
-.app__logo-accent {
+.app__search-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.app__search-close:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* The account: just the display picture, with name and sign-out behind it. */
+.account-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-menu__button {
+  display: block;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.account-menu__button:hover .account-menu__avatar,
+.account-menu__button[aria-expanded='true'] .account-menu__avatar {
+  box-shadow: 0 0 0 2px var(--accent-border);
+}
+
+.account-menu__avatar {
+  display: block;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: box-shadow 0.15s ease;
+}
+
+.account-menu__avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.account-menu__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 210px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.account-menu__identity {
+  padding: 7px 9px 9px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-menu__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__email {
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.account-menu__item:hover {
+  background: var(--accent-bg);
   color: var(--accent);
 }
 
@@ -217,14 +570,11 @@
   margin: 0;
 }
 
-/* Signed-out state: no header, so the welcome block owns the whole viewport
-   and sits dead centre both ways. */
 /* Signed-out state: a card floating on the tinted page, rather than the
-   app's usual near-white content surface. */
+   app's usual white content surface. */
 .app--centered {
   display: flex;
   flex-direction: column;
-  /* Symmetric block padding, or the centred card sits slightly high. */
   padding-block: 24px;
   background: var(--page-bg);
 }
@@ -258,10 +608,9 @@
 }
 
 .welcome__title {
-  font-family: var(--heading);
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.8px;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1.15;
   margin: 0;
   color: var(--text-h);
@@ -294,13 +643,11 @@
   color: #fff;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px var(--accent-bg);
-  transition: filter 0.15s ease, box-shadow 0.15s ease;
+  transition: filter 0.15s ease;
 }
 
 .welcome__google:hover {
   filter: brightness(1.08);
-  box-shadow: 0 4px 12px var(--accent-bg);
 }
 
 .welcome__google:active {
@@ -324,6 +671,8 @@
   display: block;
 }
 
+/* ---------- Tasks page ---------- */
+
 .daily-tasks__stats {
   display: flex;
   align-items: center;
@@ -340,42 +689,14 @@
   white-space: nowrap;
 }
 
-.daily-tasks__categories {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.daily-tasks__category {
-  height: 32px;
-  box-sizing: border-box;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: inherit;
+.daily-tasks__archived-label {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-h);
-  background: var(--bg);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.daily-tasks__category:hover {
-  border-color: var(--accent-border);
-  background: var(--accent-bg);
-}
-
-.daily-tasks__category.is-active {
-  border-color: transparent;
-  background: var(--accent);
-  color: #fff;
 }
 
 .daily-tasks__progress {
-  height: 4px;
+  height: 3px;
   border-radius: 999px;
   background: var(--border);
   overflow: hidden;
@@ -397,16 +718,15 @@
 }
 
 .daily-tasks__add input {
-  height: 42px;
+  height: 40px;
   box-sizing: border-box;
-  padding: 0 14px;
+  padding: 0 13px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font: inherit;
-  font-size: 15px;
+  font-size: 14.5px;
   background: var(--bg);
   color: var(--text-h);
-  box-shadow: var(--shadow);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -415,40 +735,55 @@
   min-width: 0;
 }
 
-.daily-tasks__add-category {
-  width: 120px;
+/* Files the new task under an existing item. */
+.daily-tasks__add-item {
+  height: 40px;
+  max-width: 170px;
   flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.daily-tasks__add-item:focus {
+  outline: none;
+  border-color: var(--accent-border);
 }
 
 .daily-tasks__add input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .daily-tasks__add-btn {
-  height: 42px;
+  height: 40px;
   flex-shrink: 0;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 20px;
+  padding: 0 18px;
   border: none;
   border-radius: 10px;
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px var(--accent-bg);
-  transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  transition: transform 0.1s ease, filter 0.15s ease;
 }
 
 .daily-tasks__add-btn:hover {
   filter: brightness(1.08);
-  box-shadow: 0 4px 12px var(--accent-bg);
 }
 
 .daily-tasks__add-btn:active {
@@ -476,14 +811,13 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
 .task-item {
   /* Tighter on the right so the ⋮ sits close to the edge and the title gets
      the reclaimed space — but with enough inset to stay clear of the border. */
-  padding: 3px 9px 3px 14px;
+  padding: 4px 9px 4px 14px;
   transition: background-color 0.1s ease;
 }
 
@@ -496,66 +830,77 @@
 }
 
 .task-item--priority-urgent_important {
-  background: rgba(220, 38, 38, 0.08);
+  background: rgba(220, 38, 38, 0.07);
 }
 
 .task-item--priority-urgent_important:hover {
-  background: rgba(220, 38, 38, 0.14);
+  background: rgba(220, 38, 38, 0.12);
 }
 
 .task-item--priority-urgent_not_important {
-  background: rgba(217, 119, 6, 0.08);
+  background: rgba(217, 119, 6, 0.07);
 }
 
 .task-item--priority-urgent_not_important:hover {
-  background: rgba(217, 119, 6, 0.14);
+  background: rgba(217, 119, 6, 0.12);
 }
 
 .task-item--priority-important_not_urgent {
-  background: rgba(37, 99, 235, 0.07);
+  background: rgba(37, 99, 235, 0.06);
 }
 
 .task-item--priority-important_not_urgent:hover {
-  background: rgba(37, 99, 235, 0.13);
+  background: rgba(37, 99, 235, 0.11);
 }
 
 .task-item__row {
-  /* Third column matches the trigger exactly — any extra is dead space that
-     pushes the ⋮ away from the edge. */
-  display: grid;
-  grid-template-columns: 24px 1fr 26px;
+  display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .task-item__checkbox {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   margin: 0;
-  border: 2px solid #b3ad9e;
-  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
   background: var(--bg);
   cursor: pointer;
-  transition: border-color 0.1s ease, background-color 0.1s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .task-item__checkbox:hover {
   border-color: var(--accent);
 }
 
+.task-item__checkbox:active {
+  transform: scale(0.92);
+}
+
 .task-item__checkbox--done,
 .task-item__checkbox--done:hover {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--ok);
+  background: var(--ok);
 }
 
 .task-item__checkbox svg {
   display: block;
+}
+
+.task-item__title-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  cursor: pointer;
 }
 
 .task-item__title {
@@ -563,15 +908,54 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
   color: var(--text-h);
   font-weight: 400;
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.3;
+}
+
+.task-item--done .task-item__title {
+  color: var(--text);
+  text-decoration: line-through;
+}
+
+.task-item__badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--page-bg);
+  border: 1px solid var(--border);
+}
+
+/* "in My Event" — where a task came from, and the way back there. */
+.task-item__context {
+  flex-shrink: 0;
+  max-width: 140px;
+  padding: 1px 8px;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text);
+  background: var(--page-bg);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.task-item__context:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .task-item__menu {
   position: relative;
+  flex-shrink: 0;
 }
 
 .task-item__menu-trigger {
@@ -632,80 +1016,12 @@
   background: var(--page-bg);
 }
 
-.task-item__menu-item.is-selected {
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.task-item__menu-item--muted {
-  color: var(--text);
-}
-
-/* Shows the task's current tag next to the Tag row. */
-.task-item__menu-value {
-  flex-shrink: 0;
-  max-width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--text);
-}
-
-.task-item__menu-back {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 10px 8px;
-  margin-bottom: 4px;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: left;
-  color: var(--text);
-  background: none;
-  cursor: pointer;
-}
-
-.task-item__menu-back:hover {
-  color: var(--text-h);
-}
-
-.task-item__menu-list {
-  max-height: 168px;
-  overflow-y: auto;
-}
-
-.task-item__menu-input {
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 4px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 13px;
-  background: var(--page-bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.task-item__menu-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg);
-}
-
 .task-item__menu-item--danger {
-  color: #d1435b;
+  color: var(--danger);
 }
 
 .task-item__menu-item--danger:hover {
-  background: rgba(209, 67, 91, 0.1);
+  background: var(--danger-bg);
 }
 
 /* Four Eisenhower quadrants need their names visible — a colour dot alone
@@ -772,8 +1088,10 @@
 
 .task-item__note-error {
   font-size: 12px;
-  color: #d1435b;
+  color: var(--danger);
 }
+
+/* ---------- Task detail panel ---------- */
 
 .task-detail-panel__backdrop {
   position: fixed;
@@ -797,8 +1115,12 @@
 .task-detail-panel {
   /* Fills everything to the right of the task list, minus a breathing gap.
      Falls back to a usable width on narrower screens, where it overlaps
-     the list instead. */
-  width: calc(100% - var(--app-padding-x) - var(--content-max) - var(--panel-gap));
+     the list instead. Backdrop is position:fixed, so 100% here is the full
+     viewport — --sidebar-width has to be subtracted explicitly since the
+     sidebar is a real flex child taking real layout space, not an overlay. */
+  width: calc(
+    100% - var(--sidebar-width) - var(--app-padding-x) - var(--content-max) - var(--panel-gap)
+  );
   min-width: 420px;
   max-width: 100%;
   height: 100%;
@@ -873,11 +1195,6 @@
   min-height: 0;
 }
 
-.task-detail-panel__row {
-  display: flex;
-  gap: 24px;
-}
-
 .task-detail-panel__label {
   font-size: 12px;
   font-weight: 600;
@@ -886,12 +1203,28 @@
   letter-spacing: 0.4px;
 }
 
+.task-detail-panel__date {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text-h);
+  background: var(--bg);
+  outline: none;
+}
+
+.task-detail-panel__date:focus {
+  border-color: var(--accent-border);
+}
+
 .task-detail-panel__title-input {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
   font: inherit;
-  font-family: var(--heading);
   font-size: 17px;
   font-weight: 600;
   color: var(--text-h);
@@ -941,15 +1274,15 @@
   font: inherit;
   font-size: 13px;
   font-weight: 500;
-  color: #d1435b;
+  color: var(--danger);
   background: none;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .task-detail-panel__delete:hover {
-  border-color: #d1435b;
-  background: rgba(209, 67, 91, 0.08);
+  border-color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .task-detail-panel__done {
@@ -968,6 +1301,8 @@
 .task-detail-panel__done:hover {
   filter: brightness(1.08);
 }
+
+/* ---------- Notes editor (task panel) ---------- */
 
 .notes-editor {
   display: flex;
@@ -1027,7 +1362,6 @@
 
 .notes-editor__tool-italic {
   font-style: italic;
-  font-family: var(--heading);
 }
 
 .notes-editor__tool-underline {
@@ -1134,11 +1468,13 @@
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
-.notes-editor__content .tiptap p {
+.notes-editor__content .tiptap p,
+.page-editor .tiptap p {
   margin: 0 0 8px;
 }
 
-.notes-editor__content .tiptap > :last-child {
+.notes-editor__content .tiptap > :last-child,
+.page-editor .tiptap > :last-child {
   margin-bottom: 0;
 }
 
@@ -1151,12 +1487,15 @@
 }
 
 .notes-editor__content .tiptap ul,
-.notes-editor__content .tiptap ol {
+.notes-editor__content .tiptap ol,
+.page-editor .tiptap ul,
+.page-editor .tiptap ol {
   margin: 0 0 8px;
   padding-left: 22px;
 }
 
-.notes-editor__content .tiptap li {
+.notes-editor__content .tiptap li,
+.page-editor .tiptap li {
   margin-bottom: 2px;
 }
 
@@ -1171,33 +1510,46 @@
   gap: 8px;
 }
 
-.notes-editor__content .tiptap ul[data-type='taskList'] li > label {
+.notes-editor__content .tiptap ul[data-type='taskList'] li > label,
+.page-editor .tiptap ul[data-type='taskList'] li > label {
   flex-shrink: 0;
   margin-top: 3px;
 }
 
-.notes-editor__content .tiptap ul[data-type='taskList'] li > div {
+.notes-editor__content .tiptap ul[data-type='taskList'] li > div,
+.page-editor .tiptap ul[data-type='taskList'] li > div {
   min-width: 0;
   flex: 1;
 }
 
-.notes-editor__content .tiptap ul[data-type='taskList'] input[type='checkbox'] {
+.notes-editor__content .tiptap ul[data-type='taskList'] input[type='checkbox'],
+.page-editor .tiptap ul[data-type='taskList'] input[type='checkbox'] {
   accent-color: var(--accent);
   cursor: pointer;
 }
 
-.notes-editor__content .tiptap blockquote {
+.notes-editor__content .tiptap blockquote,
+.page-editor .tiptap blockquote {
   margin: 0 0 8px;
   padding-left: 12px;
   border-left: 3px solid var(--border);
   color: var(--text);
 }
 
-.notes-editor__content .tiptap code {
+.notes-editor__content .tiptap code,
+.page-editor .tiptap code {
   font-size: 13px;
   padding: 2px 5px;
   background: var(--code-bg);
 }
+
+.page-editor .tiptap h1,
+.page-editor .tiptap h2,
+.page-editor .tiptap h3 {
+  margin: 18px 0 6px;
+}
+
+/* ---------- Mobile ---------- */
 
 @media (max-width: 768px) {
   .app-shell {
@@ -1205,7 +1557,88 @@
   }
 
   .app {
-    padding: 16px var(--app-padding-x) 24px;
+    padding: 12px var(--app-padding-x) 24px;
+  }
+
+  .app__header {
+    margin-bottom: 20px;
+  }
+
+  /* On a phone the title wins. The search is an icon until tapped; open, it
+     takes the whole bar (title and ☰ step aside) so typing has room. */
+  .app__search-toggle {
+    display: flex;
+  }
+
+  .app__search-wrap:not(.is-open) .app__search {
+    display: none;
+  }
+
+  .app__search-wrap.is-open {
+    flex: 1;
+  }
+
+  .app__search-wrap.is-open .app__search-toggle {
+    display: none;
+  }
+
+  .app__search-wrap.is-open .app__search {
+    width: 100%;
+  }
+
+  .app__header:has(.app__search-wrap.is-open) .app__title,
+  .app__header:has(.app__search-wrap.is-open) .app__menu-btn {
+    display: none;
+  }
+
+  .app__header:has(.app__search-wrap.is-open) .app__header-right {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Mobile keeps the drawer: the ☰ button reappears (it's the only way in),
+     the sidebar becomes a fixed-position drawer with a dimmed backdrop
+     instead of a normal flex child, and it's off-screen unless opened. */
+  .app__menu-btn {
+    display: flex;
+  }
+
+  .sidebar__backdrop {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 27, 18, 0.35);
+    z-index: 30;
+    justify-content: flex-start;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .sidebar__backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 31;
+    width: 280px;
+    max-width: 84%;
+    box-shadow: 8px 0 24px rgba(30, 27, 18, 0.12);
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  /* The drawer has a fixed width on a phone; nothing to drag. */
+  .sidebar__resize {
+    display: none;
   }
 
   .app--centered > main {
@@ -1248,8 +1681,11 @@
   }
 
   .task-item__row {
-    grid-template-columns: 20px 1fr 30px;
     gap: 8px;
+  }
+
+  .task-item__context {
+    display: none;
   }
 
   /* Slightly bigger tap target on touch screens. */
@@ -1258,18 +1694,21 @@
     height: 30px;
   }
 
-  /* All three controls stay on one row; the button drops its label and
-     becomes a square + so the title keeps usable width. */
+  /* Title, tag and + stay on one row; the due date moves to the detail
+     panel, where there's room for it. */
   .daily-tasks__add {
     gap: 6px;
   }
 
-  .daily-tasks__add-category {
-    width: 88px;
+  /* The title is what you're actually typing — the item picker gives way. */
+  .daily-tasks__add-item {
+    max-width: 104px;
+    padding: 0 4px;
+    font-size: 12.5px;
   }
 
   .daily-tasks__add-btn {
-    width: 42px;
+    width: 40px;
     padding: 0;
   }
 
@@ -1290,4 +1729,3 @@
     margin-left: 0;
   }
 }
-

@@ -1,23 +1,32 @@
 :root {
-  --text: #6f6a5e;
-  --text-h: #23211a;
-  --bg: #fffdf8;
-  --page-bg: #f3f1e9;
-  --border: #e7e3d6;
-  --code-bg: #f4f3ec;
+  --text: #6b6760;
+  --text-h: #1f1d18;
+  /* Content surface is plain white; the sidebar/page tint sits just barely
+     off it, so the two read as one sheet rather than two panels. */
+  --bg: #ffffff;
+  --page-bg: #faf9f5;
+  --border: #ebe9e2;
+  --code-bg: #f5f4ef;
   --accent: #0f766e;
   --accent-bg: rgba(15, 118, 110, 0.09);
   --accent-border: rgba(15, 118, 110, 0.35);
+  /* Colour that carries meaning, not decoration. */
+  --ok: #2f8f5b;
+  --ok-bg: rgba(47, 143, 91, 0.12);
+  --warn: #b7791f;
+  --warn-bg: rgba(183, 121, 31, 0.13);
+  --danger: #c2410c;
+  --danger-bg: rgba(194, 65, 12, 0.11);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(60, 50, 20, 0.05) 0 1px 2px, rgba(60, 50, 20, 0.05) 0 8px 20px -6px;
 
-  --sans: 'Manrope Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: 'Bricolage Grotesque Variable', 'Manrope Variable', system-ui, sans-serif;
+  --sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --heading: var(--sans);
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 15px/1.5 var(--sans);
+  letter-spacing: -0.01em;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -25,53 +34,54 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 /* Dark palette applies when the OS prefers dark (and the user hasn't
    explicitly chosen light), or when the user has explicitly chosen dark —
-   the toggle in the sidebar always wins over the OS setting. */
+   the toggle in the sidebar always wins over the OS setting. Tuned by hand,
+   not inverted: surfaces lift slightly, borders soften, the accent brightens. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --text: #a49e8f;
-    --text-h: #f2efe4;
-    --bg: #201f1a;
+    --text: #a19b8e;
+    --text-h: #f1eee5;
+    --bg: #1c1b17;
     --page-bg: #161511;
-    --border: #363329;
+    --border: #2e2c25;
     --code-bg: #26241d;
     --accent: #2fbfa8;
     --accent-bg: rgba(47, 191, 168, 0.14);
     --accent-border: rgba(47, 191, 168, 0.45);
+    --ok: #4cbf7e;
+    --ok-bg: rgba(76, 191, 126, 0.16);
+    --warn: #d9a441;
+    --warn-bg: rgba(217, 164, 65, 0.16);
+    --danger: #e9744a;
+    --danger-bg: rgba(233, 116, 74, 0.16);
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 1px 2px, rgba(0, 0, 0, 0.3) 0 8px 16px -4px;
   }
-
-  :root:not([data-theme='light']) #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
 }
 
 :root[data-theme='dark'] {
-  --text: #a49e8f;
-  --text-h: #f2efe4;
-  --bg: #201f1a;
+  --text: #a19b8e;
+  --text-h: #f1eee5;
+  --bg: #1c1b17;
   --page-bg: #161511;
-  --border: #363329;
+  --border: #2e2c25;
   --code-bg: #26241d;
   --accent: #2fbfa8;
   --accent-bg: rgba(47, 191, 168, 0.14);
   --accent-border: rgba(47, 191, 168, 0.45);
+  --ok: #4cbf7e;
+  --ok-bg: rgba(76, 191, 126, 0.16);
+  --warn: #d9a441;
+  --warn-bg: rgba(217, 164, 65, 0.16);
+  --danger: #e9744a;
+  --danger-bg: rgba(233, 116, 74, 0.16);
   --social-bg: rgba(47, 48, 58, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.4) 0 1px 2px, rgba(0, 0, 0, 0.3) 0 8px 16px -4px;
-}
-
-:root[data-theme='dark'] #social .button-icon {
-  filter: invert(1) brightness(2);
 }
 
 #root {
@@ -86,33 +96,44 @@ body {
   background: var(--page-bg);
 }
 
+/* Hierarchy comes from weight and spacing more than size. */
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--heading);
-  font-weight: 500;
   color: var(--text-h);
+  margin: 0;
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
+
 h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
+
+h3 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 p {
   margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 code,
@@ -124,7 +145,7 @@ code,
 }
 
 code {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);

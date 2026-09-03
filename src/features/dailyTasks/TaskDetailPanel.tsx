@@ -17,10 +17,18 @@ interface Props {
   onClose: () => void
   onDelete: (task: Task) => void
   onChangePriority: (task: Task, priority: TaskPriority) => void
+  onChangeDueDate: (task: Task, dueDate: string | null) => void
   onRename: (task: Task, title: string) => void
 }
 
-export function TaskDetailPanel({ task, onClose, onDelete, onChangePriority, onRename }: Props) {
+export function TaskDetailPanel({
+  task,
+  onClose,
+  onDelete,
+  onChangePriority,
+  onChangeDueDate,
+  onRename,
+}: Props) {
   const [titleValue, setTitleValue] = useState(task.title)
   const [notes, setNotes] = useState('')
   const [note, setNote] = useState<Note | null>(null)
@@ -150,6 +158,19 @@ export function TaskDetailPanel({ task, onClose, onDelete, onChangePriority, onR
               onUndoAiAction={handleUndoNoteAction}
             />
             {aiError && <div className="task-item__note-error">{aiError}</div>}
+          </div>
+
+          <div className="task-detail-panel__field">
+            <label className="task-detail-panel__label" htmlFor="task-due-date">
+              Due date
+            </label>
+            <input
+              id="task-due-date"
+              type="date"
+              className="task-detail-panel__date"
+              value={task.due_date ?? ''}
+              onChange={(e) => onChangeDueDate(task, e.target.value || null)}
+            />
           </div>
 
           <div className="task-detail-panel__field">

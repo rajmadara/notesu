@@ -18,6 +18,18 @@ export function createTasksRouter(store: TaskStore): Router {
     }),
   )
 
+  router.get(
+    '/search',
+    asyncHandler(async (req, res) => {
+      const query = String(req.query.q ?? '').trim()
+      if (!query) {
+        res.json([])
+        return
+      }
+      res.json(await store.searchTasks(req.userId, query))
+    }),
+  )
+
   router.post(
     '/',
     asyncHandler(async (req, res) => {
@@ -26,8 +38,27 @@ export function createTasksRouter(store: TaskStore): Router {
         res.status(400).json({ error: 'title is required' })
         return
       }
-      const category = String(req.body.category ?? '').trim()
-      res.status(201).json(await store.createTask(req.userId, title, category))
+      const dueDate = req.body.due_date
+      const itemId = Number(req.body.item_id)
+      res.status(201).json(
+        await store.createTask(req.userId, title, {
+          due_date:
+            typeof dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null,
+          // The store checks the caller may actually write to this item.
+          item_id: Number.isInteger(itemId) && itemId > 0 ? itemId : null,
+        }),
+      )
+    }),
+  )
+
+  router.put(
+    '/:id/due-date',
+    asyncHandler(async (req, res) => {
+      const value = req.body.due_date
+      const dueDate =
+        typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
+      await store.setTaskDueDate(req.userId, Number(req.params.id), dueDate)
+      res.status(204).end()
     }),
   )
 
@@ -75,6 +106,15 @@ export function createTasksRouter(store: TaskStore): Router {
     asyncHandler(async (req, res) => {
       const category = String(req.body.category ?? '').trim()
       await store.setTaskCategory(req.userId, Number(req.params.id), category)
+      res.status(204).end()
+    }),
+  )
+
+  router.put(
+    '/:id/archive',
+    asyncHandler(async (req, res) => {
+      const archived = Boolean(req.body.archived)
+      await store.setTaskArchived(req.userId, Number(req.params.id), archived)
       res.status(204).end()
     }),
   )

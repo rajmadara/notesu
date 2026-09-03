@@ -32,3 +32,6 @@ server/.env
 *.sln
 *.sw?
 *.old
+
+# TypeScript incremental build info
+*.tsbuildinfo

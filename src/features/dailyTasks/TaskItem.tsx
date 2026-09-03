@@ -1,56 +1,40 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Task } from '../../lib/types'
+import { dueLabel, dueTone } from '../../lib/date'
 
 interface Props {
   task: Task
-  categories: string[]
+  /** Name of the item this task belongs to, if any — shown as a chip. */
+  itemName?: string
+  showArchivedBadge?: boolean
   onToggleDone: (task: Task) => void
-  onChangeCategory: (task: Task, category: string) => void
+  onToggleArchive: (task: Task) => void
   onDelete: (task: Task) => void
   onSelect: (task: Task) => void
+  onOpenItem?: (itemId: number) => void
 }
 
 export function TaskItem({
   task,
-  categories,
+  itemName,
+  showArchivedBadge = false,
   onToggleDone,
-  onChangeCategory,
+  onToggleArchive,
   onDelete,
   onSelect,
+  onOpenItem,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [view, setView] = useState<'main' | 'tag'>('main')
-  const [newTag, setNewTag] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) closeMenu()
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [menuOpen])
-
-  function closeMenu() {
-    setMenuOpen(false)
-    setView('main')
-    setNewTag('')
-  }
-
-  function applyTag(category: string) {
-    closeMenu()
-    if (category !== (task.category ?? '')) onChangeCategory(task, category)
-  }
-
-  function handleNewTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    const value = newTag.trim()
-    if (value) applyTag(value)
-  }
-
-  const current = task.category?.trim() ?? ''
 
   return (
     <li className={`task-item task-item--${task.status} task-item--priority-${task.priority}`}>
@@ -76,15 +60,36 @@ export function TaskItem({
           )}
         </button>
 
-        <span className="task-item__title" onClick={() => onSelect(task)} title="Click for details">
-          {task.title}
+        <span
+          className="task-item__title-group"
+          onClick={() => onSelect(task)}
+          title="Click for details"
+        >
+          <span className="task-item__title">{task.title}</span>
+          {showArchivedBadge && task.archived && (
+            <span className="task-item__badge">Archived</span>
+          )}
         </span>
+
+        {itemName && task.item_id !== null && (
+          <button
+            type="button"
+            className="task-item__context"
+            onClick={() => onOpenItem?.(task.item_id!)}
+            title={`Open ${itemName}`}
+          >
+            {itemName}
+          </button>
+        )}
+        {task.due_date && task.status !== 'done' && (
+          <span className={`due-chip is-${dueTone(task.due_date)}`}>{dueLabel(task.due_date)}</span>
+        )}
 
         <div className="task-item__menu" ref={menuRef}>
           <button
             type="button"
             className="task-item__menu-trigger"
-            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
+            onClick={() => setMenuOpen((v) => !v)}
             aria-label="Task options"
             aria-expanded={menuOpen}
           >
@@ -95,72 +100,28 @@ export function TaskItem({
             </svg>
           </button>
 
-          {menuOpen && view === 'main' && (
+          {menuOpen && (
             <div className="task-item__menu-dropdown">
-              {/* More options land here in future. */}
               <button
                 type="button"
                 className="task-item__menu-item"
-                onClick={() => setView('tag')}
+                onClick={() => {
+                  setMenuOpen(false)
+                  onToggleArchive(task)
+                }}
               >
-                Tag
-                <span className="task-item__menu-value">{current || 'None'}</span>
+                {task.archived ? 'Unarchive' : 'Archive'}
               </button>
               <button
                 type="button"
                 className="task-item__menu-item task-item__menu-item--danger"
                 onClick={() => {
-                  closeMenu()
+                  setMenuOpen(false)
                   onDelete(task)
                 }}
               >
                 Delete
               </button>
-            </div>
-          )}
-
-          {menuOpen && view === 'tag' && (
-            <div className="task-item__menu-dropdown">
-              <button
-                type="button"
-                className="task-item__menu-back"
-                onClick={() => setView('main')}
-              >
-                <span aria-hidden="true">&lsaquo;</span> Tag
-              </button>
-
-              <div className="task-item__menu-list">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={`task-item__menu-item${category === current ? ' is-selected' : ''}`}
-                    onClick={() => applyTag(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
-                {current && (
-                  <button
-                    type="button"
-                    className="task-item__menu-item task-item__menu-item--muted"
-                    onClick={() => applyTag('')}
-                  >
-                    Remove tag
-                  </button>
-                )}
-              </div>
-
-              <input
-                type="text"
-                className="task-item__menu-input"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={handleNewTagKeyDown}
-                placeholder="New tag..."
-                aria-label="New tag"
-                autoFocus
-              />
             </div>
           )}
         </div>
