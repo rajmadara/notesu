@@ -104,7 +104,8 @@ export function Sidebar({
   }, [onCloseMobile])
 
   const isItemActive = (id: number) => route.kind === 'item' && route.itemId === id
-  const onTasks = route.kind === 'tasks'
+  // Home is the task surface now; archived is a mode of it, not a page.
+  const onTasks = route.kind === 'home'
   // Items reached through a shared space are nested under it; the rest —
   // shared individually — are listed on their own so nothing appears twice.
   const sharedSpaceIds = new Set(sharedSpaces.map((s) => s.id))
@@ -177,7 +178,10 @@ export function Sidebar({
             <button
               type="button"
               className={`sidebar-rail__brand${route.kind === 'home' ? ' is-active' : ''}`}
-              onClick={() => onNavigate({ kind: 'home' })}
+              onClick={() => {
+                onChangeView('active')
+                onNavigate({ kind: 'home' })
+              }}
               aria-label="Home"
               title="Notesu — Home"
             >
@@ -192,7 +196,7 @@ export function Sidebar({
               className={`sidebar-rail__icon${onTasks && view === 'active' ? ' is-active' : ''}`}
               onClick={() => {
                 onChangeView('active')
-                onNavigate({ kind: 'tasks' })
+                onNavigate({ kind: 'home' })
               }}
               aria-label="Tasks"
               title="Tasks"
@@ -204,7 +208,7 @@ export function Sidebar({
               className={`sidebar-rail__icon${onTasks && view === 'archived' ? ' is-active' : ''}`}
               onClick={() => {
                 onChangeView('archived')
-                onNavigate({ kind: 'tasks' })
+                onNavigate({ kind: 'home' })
               }}
               aria-label="Archived"
               title="Archived"
@@ -241,7 +245,10 @@ export function Sidebar({
               <button
                 type="button"
                 className={`sidebar__brand${route.kind === 'home' ? ' is-active' : ''}`}
-                onClick={() => onNavigate({ kind: 'home' })}
+                onClick={() => {
+                  onChangeView('active')
+                  onNavigate({ kind: 'home' })
+                }}
                 aria-label="Home"
                 title="Home"
               >
@@ -261,7 +268,7 @@ export function Sidebar({
                 className={`sidebar__nav-item${onTasks && view === 'active' ? ' is-active' : ''}`}
                 onClick={() => {
                   onChangeView('active')
-                  onNavigate({ kind: 'tasks' })
+                  onNavigate({ kind: 'home' })
                 }}
               >
                 <SquareCheck size={15} /> Tasks
@@ -472,7 +479,7 @@ export function Sidebar({
                   className={`sidebar__nav-item${onTasks && view === 'archived' ? ' is-active' : ''}`}
                   onClick={() => {
                     onChangeView('archived')
-                    onNavigate({ kind: 'tasks' })
+                    onNavigate({ kind: 'home' })
                   }}
                 >
                   <Archive size={15} /> Archived

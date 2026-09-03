@@ -321,6 +321,49 @@
   margin-bottom: 16px;
 }
 
+.dialog--compact {
+  max-width: 400px;
+}
+
+/* Echo of the task being filed, so the dialog has a subject. */
+.add-task__title {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-h);
+  background: var(--page-bg);
+  overflow-wrap: anywhere;
+}
+
+.add-task__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-task__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.add-task__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.add-task__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 .share-form {
   display: flex;
   gap: 8px;
@@ -381,7 +424,7 @@
 }
 
 .is-done > .check-row__box,
-.home__task.is-done .check-row__box {
+.task-row.is-done .check-row__box {
   background: var(--ok);
   border-color: var(--ok);
 }
@@ -442,20 +485,20 @@
 
 /* ---------- Home ---------- */
 
-.home {
+.task-page {
   display: flex;
   flex-direction: column;
   gap: 34px;
   max-width: 640px;
 }
 
-.home__section {
+.task-page__section {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.home__section-head {
+.task-page__section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -463,12 +506,12 @@
   border-bottom: 1px solid var(--border);
 }
 
-.home__stat {
+.task-page__stat {
   font-size: 13px;
   color: var(--text);
 }
 
-.home__add {
+.task-add {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -479,18 +522,18 @@
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.home__add:focus-within {
+.task-add:focus-within {
   border-style: solid;
   border-color: var(--accent-border);
   background: var(--bg);
 }
 
-.home__add-icon {
+.task-add__icon {
   color: var(--text);
   flex-shrink: 0;
 }
 
-.home__add-input {
+.task-add__input {
   flex: 1;
   min-width: 0;
   border: none;
@@ -501,14 +544,14 @@
   color: var(--text-h);
 }
 
-.home__tasks,
+.task-rows,
 .home__upcoming {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.home__task {
+.task-row {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -516,25 +559,78 @@
   border-bottom: 1px solid var(--border);
 }
 
-.home__task:last-child {
+.task-row:last-child {
   border-bottom: none;
 }
 
-.home__task-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 14.5px;
-  color: var(--text-h);
-  overflow-wrap: anywhere;
-  transition: color 0.15s ease;
+/* Priority as a small dot: the Eisenhower quadrant stays visible on the row
+   without the whole row taking on a colour wash. */
+.task-row__priority {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--priority-color, var(--border));
 }
 
-.home__task.is-done .home__task-title {
+.task-row__priority.is-urgent_important {
+  --priority-color: #dc2626;
+}
+
+.task-row__priority.is-urgent_not_important {
+  --priority-color: #d97706;
+}
+
+.task-row__priority.is-important_not_urgent {
+  --priority-color: #2563eb;
+}
+
+.task-row.is-done .task-row__priority {
+  opacity: 0.4;
+}
+
+/* A button so the whole title opens the task, but styled as plain text. */
+.task-row__title {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  color: var(--text-h);
+  background: none;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.task-row__title:hover {
+  background: var(--page-bg);
+}
+
+.task-rows--later {
+  margin-top: 2px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.home__more-icon {
+  transition: transform 0.15s ease;
+}
+
+.home__more-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.task-row.is-done .task-row__title {
   color: var(--text);
   text-decoration: line-through;
 }
 
-.home__task-context {
+.task-row__context {
   padding: 1px 7px;
   border: none;
   border-radius: 999px;
@@ -547,7 +643,7 @@
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.home__task-context:hover {
+.task-row__context:hover {
   color: var(--accent);
   background: var(--accent-bg);
 }

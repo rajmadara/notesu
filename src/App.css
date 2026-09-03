@@ -671,31 +671,7 @@
   display: block;
 }
 
-/* ---------- Tasks page ---------- */
-
-.daily-tasks__stats {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-.daily-tasks__count {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  flex-shrink: 0;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.daily-tasks__archived-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.daily-tasks__progress {
+.task-page__progress {
   height: 3px;
   border-radius: 999px;
   background: var(--border);
@@ -703,7 +679,7 @@
   margin-bottom: 20px;
 }
 
-.daily-tasks__progress-fill {
+.task-page__progress-fill {
   display: block;
   height: 100%;
   border-radius: 999px;
@@ -711,227 +687,8 @@
   transition: width 0.25s ease;
 }
 
-.daily-tasks__add {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.daily-tasks__add input {
-  height: 40px;
-  box-sizing: border-box;
-  padding: 0 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 14.5px;
-  background: var(--bg);
-  color: var(--text-h);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.daily-tasks__add-title {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Files the new task under an existing item. */
-.daily-tasks__add-item {
-  height: 40px;
-  max-width: 170px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 13.5px;
-  color: var(--text);
-  background: var(--bg);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.daily-tasks__add-item:focus {
-  outline: none;
-  border-color: var(--accent-border);
-}
-
-.daily-tasks__add input:focus {
-  outline: none;
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px var(--accent-bg);
-}
-
-.daily-tasks__add-btn {
-  height: 40px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 18px;
-  border: none;
-  border-radius: 10px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--accent);
-  cursor: pointer;
-  transition: transform 0.1s ease, filter 0.15s ease;
-}
-
-.daily-tasks__add-btn:hover {
-  filter: brightness(1.08);
-}
-
-.daily-tasks__add-btn:active {
-  transform: translateY(1px);
-}
-
-/* The word "Add" gives way to a + on phones, where the row has no
-   spare width for it. */
-.daily-tasks__add-btn-icon {
-  display: none;
-}
-
-.daily-tasks__empty {
-  color: var(--text);
-  padding: 32px 0;
-  text-align: center;
-}
-
-.task-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.task-item {
-  /* Tighter on the right so the ⋮ sits close to the edge and the title gets
-     the reclaimed space — but with enough inset to stay clear of the border. */
-  padding: 4px 9px 4px 14px;
-  transition: background-color 0.1s ease;
-}
-
-.task-item + .task-item {
-  border-top: 1px solid var(--border);
-}
-
-.task-item:hover {
-  background: var(--page-bg);
-}
-
-.task-item--priority-urgent_important {
-  background: rgba(220, 38, 38, 0.07);
-}
-
-.task-item--priority-urgent_important:hover {
-  background: rgba(220, 38, 38, 0.12);
-}
-
-.task-item--priority-urgent_not_important {
-  background: rgba(217, 119, 6, 0.07);
-}
-
-.task-item--priority-urgent_not_important:hover {
-  background: rgba(217, 119, 6, 0.12);
-}
-
-.task-item--priority-important_not_urgent {
-  background: rgba(37, 99, 235, 0.06);
-}
-
-.task-item--priority-important_not_urgent:hover {
-  background: rgba(37, 99, 235, 0.11);
-}
-
-.task-item__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.task-item__checkbox {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin: 0;
-  border: 1.5px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-}
-
-.task-item__checkbox:hover {
-  border-color: var(--accent);
-}
-
-.task-item__checkbox:active {
-  transform: scale(0.92);
-}
-
-.task-item__checkbox--done,
-.task-item__checkbox--done:hover {
-  border-color: var(--ok);
-  background: var(--ok);
-}
-
-.task-item__checkbox svg {
-  display: block;
-}
-
-.task-item__title-group {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.task-item__title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-h);
-  font-weight: 400;
-  font-size: 14.5px;
-  line-height: 1.3;
-}
-
-.task-item--done .task-item__title {
-  color: var(--text);
-  text-decoration: line-through;
-}
-
-.task-item__badge {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text);
-  background: var(--page-bg);
-  border: 1px solid var(--border);
-}
-
 /* "in My Event" — where a task came from, and the way back there. */
-.task-item__context {
+.task-row__context {
   flex-shrink: 0;
   max-width: 140px;
   padding: 1px 8px;
@@ -946,82 +703,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.task-item__context:hover {
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.task-item__menu {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.task-item__menu-trigger {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  background: none;
-  color: var(--text);
-  transition: background-color 0.1s ease, color 0.1s ease;
-}
-
-.task-item__menu-trigger:hover,
-.task-item__menu-trigger[aria-expanded='true'] {
-  background: var(--page-bg);
-  color: var(--text-h);
-}
-
-.task-item__menu-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 180px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg);
-  box-shadow: var(--shadow);
-  z-index: 5;
-}
-
-.task-item__menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 8px;
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  color: var(--text-h);
-  background: none;
-  cursor: pointer;
-}
-
-.task-item__menu-item:hover {
-  background: var(--page-bg);
-}
-
-.task-item__menu-item--danger {
-  color: var(--danger);
-}
-
-.task-item__menu-item--danger:hover {
-  background: var(--danger-bg);
 }
 
 /* Four Eisenhower quadrants need their names visible — a colour dot alone
@@ -1283,6 +964,26 @@
 .task-detail-panel__delete:hover {
   border-color: var(--danger);
   background: var(--danger-bg);
+}
+
+.task-detail-panel__archive {
+  margin-right: auto;
+  margin-left: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.task-detail-panel__archive:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
 }
 
 .task-detail-panel__done {
@@ -1678,46 +1379,6 @@
   .task-detail-panel__footer {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .task-item__row {
-    gap: 8px;
-  }
-
-  .task-item__context {
-    display: none;
-  }
-
-  /* Slightly bigger tap target on touch screens. */
-  .task-item__menu-trigger {
-    width: 30px;
-    height: 30px;
-  }
-
-  /* Title, tag and + stay on one row; the due date moves to the detail
-     panel, where there's room for it. */
-  .daily-tasks__add {
-    gap: 6px;
-  }
-
-  /* The title is what you're actually typing — the item picker gives way. */
-  .daily-tasks__add-item {
-    max-width: 104px;
-    padding: 0 4px;
-    font-size: 12.5px;
-  }
-
-  .daily-tasks__add-btn {
-    width: 40px;
-    padding: 0;
-  }
-
-  .daily-tasks__add-btn-label {
-    display: none;
-  }
-
-  .daily-tasks__add-btn-icon {
-    display: block;
   }
 
   .notes-editor__toolbar {

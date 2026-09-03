@@ -19,6 +19,8 @@ interface Props {
   onChangePriority: (task: Task, priority: TaskPriority) => void
   onChangeDueDate: (task: Task, dueDate: string | null) => void
   onRename: (task: Task, title: string) => void
+  /** Offered where the row has no menu of its own; omitted inside an item. */
+  onArchive?: (task: Task) => void
   /**
    * How notes are read and written. Defaults to the personal task endpoints;
    * a task inside an item passes the workspace ones, which authorise through
@@ -35,6 +37,7 @@ export function TaskDetailPanel({
   onChangePriority,
   onChangeDueDate,
   onRename,
+  onArchive,
   loadNotes = getNotesForTask,
   saveNotes = upsertTaskNote,
 }: Props) {
@@ -210,6 +213,15 @@ export function TaskDetailPanel({
           <button type="button" className="task-detail-panel__delete" onClick={handleDelete}>
             Delete
           </button>
+          {onArchive && (
+            <button
+              type="button"
+              className="task-detail-panel__archive"
+              onClick={() => onArchive(task)}
+            >
+              {task.archived ? 'Unarchive' : 'Archive'}
+            </button>
+          )}
           <button type="button" className="task-detail-panel__done" onClick={onClose}>
             Done
           </button>

@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { Home as HomeIcon, Menu, Plus, SquareCheck } from 'lucide-react'
+import { Archive, Home as HomeIcon, Menu, Plus } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from './lib/theme'
-import type { Item, SharedItem, SharedSpace, Space, Task } from './lib/types'
-import { createTask, getAllTasks, searchTasks, setTaskStatus } from './lib/db'
+import type { Item, SharedItem, SharedSpace, Space, Task, TaskPriority } from './lib/types'
+import {
+  createTask,
+  deleteTask,
+  getAllTasks,
+  searchTasks,
+  setTaskArchived,
+  setTaskDueDate,
+  setTaskPriority,
+  setTaskStatus,
+  setTaskTitle,
+} from './lib/db'
 import {
   createItem,
   createSpace,
@@ -15,7 +25,6 @@ import {
   getSpaces,
   updateSpace,
 } from './lib/workspace'
-import { DailyTasks } from './features/dailyTasks/DailyTasks'
 import { Home } from './features/home/Home'
 import { ItemWorkspace } from './features/workspace/ItemWorkspace'
 import { SpacePage } from './features/workspace/SpacePage'
@@ -35,7 +44,6 @@ export type TaskView = 'active' | 'archived'
  */
 export type Route =
   | { kind: 'home' }
-  | { kind: 'tasks' }
   | { kind: 'space'; spaceId: number }
   | { kind: 'item'; itemId: number; pageId: number | null }
 
@@ -141,9 +149,17 @@ function App() {
       return
     }
     setSearchResults(await searchTasks(query))
-    setRoute({ kind: 'tasks' })
+    setRoute({ kind: 'home' })
   }
 
+  async function handleAddTask(title: string, itemId: number | null, dueDate: string | null) {
+    await createTask(title, itemId, dueDate)
+    await refreshTasks()
+    // A task filed under an item lands on that item's Tasks page too.
+    if (itemId !== null) await refreshWorkspace()
+  }
+
+  /** The sidebar's "New → Task" stays a one-liner; no dialog there. */
   async function handleQuickTask(title: string) {
     await createTask(title)
     await refreshTasks()
@@ -151,6 +167,31 @@ function App() {
 
   async function handleToggleTask(task: Task) {
     await setTaskStatus(task.id, task.status === 'done' ? 'not_started' : 'done')
+    await refreshTasks()
+  }
+
+  async function handleRenameTask(task: Task, title: string) {
+    await setTaskTitle(task.id, title)
+    await refreshTasks()
+  }
+
+  async function handleChangePriority(task: Task, priority: TaskPriority) {
+    await setTaskPriority(task.id, priority)
+    await refreshTasks()
+  }
+
+  async function handleChangeDueDate(task: Task, dueDate: string | null) {
+    await setTaskDueDate(task.id, dueDate)
+    await refreshTasks()
+  }
+
+  async function handleArchiveTask(task: Task) {
+    await setTaskArchived(task.id, !task.archived)
+    await refreshTasks()
+  }
+
+  async function handleDeleteTask(task: Task) {
+    await deleteTask(task.id)
     await refreshTasks()
   }
 
@@ -169,7 +210,7 @@ function App() {
   function navigate(next: Route) {
     setRoute(next)
     setSidebarMobileOpen(false)
-    if (next.kind !== 'tasks') setSearchResults(null)
+    setSearchResults(null)
   }
 
   const meta = (session?.user.user_metadata ?? {}) as { full_name?: string }
@@ -249,17 +290,6 @@ function App() {
                 </div>
               </div>
             </div>
-          ) : route.kind === 'home' ? (
-            <Home
-              name={firstName}
-              tasks={tasks}
-              items={items}
-              spaces={spaces}
-              onAddTask={handleQuickTask}
-              onToggleTask={handleToggleTask}
-              onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}
-              onOpenTasks={() => navigate({ kind: 'tasks' })}
-            />
           ) : route.kind === 'item' ? (
             <ItemWorkspace
               key={route.itemId}
@@ -308,14 +338,23 @@ function App() {
                 />
               )
             })()
+          ) : tasksLoading ? (
+            <p className="empty-state">Loading...</p>
           ) : (
-            <DailyTasks
+            <Home
+              name={firstName}
               tasks={tasks}
-              loading={tasksLoading}
               items={items}
+              spaces={spaces}
               view={view}
               searchResults={searchResults}
-              onRefresh={refreshTasks}
+              onAddTask={handleAddTask}
+              onToggleTask={handleToggleTask}
+              onRenameTask={handleRenameTask}
+              onChangePriority={handleChangePriority}
+              onChangeDueDate={handleChangeDueDate}
+              onArchiveTask={handleArchiveTask}
+              onDeleteTask={handleDeleteTask}
               onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}
             />
           )}
@@ -325,13 +364,27 @@ function App() {
 
       {session && (
         <nav className="bottom-nav" aria-label="Mobile">
-          <button type="button" className={`bottom-nav__item${route.kind === 'home' ? ' is-active' : ''}`} onClick={() => navigate({ kind: 'home' })}>
+          <button
+            type="button"
+            className={`bottom-nav__item${route.kind === 'home' && view === 'active' ? ' is-active' : ''}`}
+            onClick={() => {
+              setView('active')
+              navigate({ kind: 'home' })
+            }}
+          >
             <HomeIcon size={20} />
             Home
           </button>
-          <button type="button" className={`bottom-nav__item${route.kind === 'tasks' ? ' is-active' : ''}`} onClick={() => navigate({ kind: 'tasks' })}>
-            <SquareCheck size={20} />
-            Tasks
+          <button
+            type="button"
+            className={`bottom-nav__item${route.kind === 'home' && view === 'archived' ? ' is-active' : ''}`}
+            onClick={() => {
+              setView('archived')
+              navigate({ kind: 'home' })
+            }}
+          >
+            <Archive size={20} />
+            Archived
           </button>
           <button
             type="button"

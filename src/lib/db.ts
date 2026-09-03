@@ -60,12 +60,16 @@ export async function searchTasks(query: string): Promise<Task[]> {
 
 /**
  * Creates a task. Passing an itemId files it under that item (and onto that
- * item's task list); without one it lands in the plain Tasks list.
+ * item's Tasks page); without one it lands in the plain task list.
  */
-export async function createTask(title: string, itemId: number | null = null): Promise<Task> {
+export async function createTask(
+  title: string,
+  itemId: number | null = null,
+  dueDate: string | null = null,
+): Promise<Task> {
   return request<Task>('', {
     method: 'POST',
-    body: JSON.stringify({ title, item_id: itemId }),
+    body: JSON.stringify({ title, item_id: itemId, due_date: dueDate }),
   })
 }
 

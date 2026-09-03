@@ -1,41 +1,82 @@
-import { useState } from 'react'
-import { ArrowRight, Check, Plus } from 'lucide-react'
-import type { Item, Space, Task } from '../../lib/types'
+import { Suspense, lazy, useState } from 'react'
+import { ChevronDown, Plus } from 'lucide-react'
+import type { Item, Space, Task, TaskPriority } from '../../lib/types'
+import type { TaskView } from '../../App'
 import { dueLabel, dueTone, formatShortDate, greeting, todayISO } from '../../lib/date'
 import { HeaderTitle } from '../shell/HeaderSlot'
 import { EntityIcon } from '../workspace/EntityIcon'
 import { DEFAULT_ITEM_ICON } from '../../lib/icons'
+import { AddTaskDialog } from '../tasks/AddTaskDialog'
+import { TaskRow } from '../tasks/TaskRow'
+
+// ~390kB of editor, only once someone opens a task.
+const TaskDetailPanel = lazy(() =>
+  import('../dailyTasks/TaskDetailPanel').then((m) => ({ default: m.TaskDetailPanel })),
+)
 
 interface Props {
   name: string
   tasks: Task[]
   items: Item[]
   spaces: Space[]
-  onAddTask: (title: string) => Promise<void>
+  view: TaskView
+  searchResults: Task[] | null
+  onAddTask: (title: string, itemId: number | null, dueDate: string | null) => Promise<void>
   onToggleTask: (task: Task) => Promise<void>
+  onRenameTask: (task: Task, title: string) => Promise<void>
+  onChangePriority: (task: Task, priority: TaskPriority) => Promise<void>
+  onChangeDueDate: (task: Task, dueDate: string | null) => Promise<void>
+  onArchiveTask: (task: Task) => Promise<void>
+  onDeleteTask: (task: Task) => Promise<void>
   onOpenItem: (itemId: number) => void
-  onOpenTasks: () => void
 }
 
 /**
- * The command centre: today's tasks first, then what's coming up across the
- * user's items. Deliberately a list, not a dashboard.
+ * The one task surface. Today's work first, then what's coming up across the
+ * user's items. Archived and search reuse the same list rather than living on
+ * a separate page that looked almost identical.
  */
-export function Home({ name, tasks, items, spaces, onAddTask, onToggleTask, onOpenItem, onOpenTasks }: Props) {
+export function Home({
+  name,
+  tasks,
+  items,
+  spaces,
+  view,
+  searchResults,
+  onAddTask,
+  onToggleTask,
+  onRenameTask,
+  onChangePriority,
+  onChangeDueDate,
+  onArchiveTask,
+  onDeleteTask,
+  onOpenItem,
+}: Props) {
   const [title, setTitle] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState<string | null>(null)
+  const [showLater, setShowLater] = useState(false)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
+  const searching = searchResults !== null
+  const archived = view === 'archived'
   const today = todayISO()
+
   const active = tasks.filter((t) => !t.archived)
-  // "Today" = anything due by today, plus everything with no date at all —
-  // i.e. the actionable set. Dated-for-later tasks wait on the Tasks page.
-  const todays = active
-    .filter((t) => !t.due_date || t.due_date <= today)
-    .sort((a, b) => {
-      if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1
-      return (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || b.created_at - a.created_at
-    })
+  const byUrgency = (a: Task, b: Task) => {
+    if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1
+    return (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || b.created_at - a.created_at
+  }
+  // "Today" is the actionable set: anything due by today, plus everything with
+  // no date at all. Dated-for-later waits behind the toggle.
+  const todays = active.filter((t) => !t.due_date || t.due_date <= today).sort(byUrgency)
+  const later = active.filter((t) => t.due_date && t.due_date > today).sort(byUrgency)
   const doneCount = todays.filter((t) => t.status === 'done').length
+
+  const listed = searching
+    ? [...searchResults].sort(byUrgency)
+    : archived
+      ? tasks.filter((t) => t.archived).sort(byUrgency)
+      : todays
 
   const remainingByItem = new Map<number, number>()
   for (const t of active) {
@@ -53,86 +94,90 @@ export function Home({ name, tasks, items, spaces, onAddTask, onToggleTask, onOp
     })
     .slice(0, 6)
   const spaceName = (id: number) => spaces.find((s) => s.id === id)?.name ?? ''
+  const selected = tasks.find((t) => t.id === selectedId) ?? null
 
-  async function add(e: React.FormEvent) {
+  function startAdd(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = title.trim()
-    if (!trimmed || busy) return
-    setBusy(true)
-    await onAddTask(trimmed)
-    setTitle('')
-    setBusy(false)
+    if (!trimmed) return
+    setPending(trimmed)
   }
 
+  const row = (task: Task) => (
+    <TaskRow
+      key={task.id}
+      task={task}
+      itemName={task.item_id !== null ? items.find((i) => i.id === task.item_id)?.name : undefined}
+      hideTodayChip={!archived && !searching}
+      onToggle={onToggleTask}
+      onOpen={(t) => setSelectedId(t.id)}
+      onOpenItem={onOpenItem}
+    />
+  )
+
   return (
-    <div className="home">
+    <div className="task-page">
       <HeaderTitle>
-        {/* Grouped so the date sits on the greeting's baseline rather than
-            being centred against a much larger line box. */}
         <span className="header-title-group">
           <h1 className="header-title">
-            {greeting()}
-            {name ? `, ${name}` : ''}
+            {searching ? 'Search' : archived ? 'Archived' : `${greeting()}${name ? `, ${name}` : ''}`}
           </h1>
-          <span className="header-sub">{formatShortDate(today)}</span>
+          {!searching && !archived && <span className="header-sub">{formatShortDate(today)}</span>}
         </span>
       </HeaderTitle>
 
-      <section className="home__section">
-        <div className="home__section-head">
-          <h2 className="section-title">Today</h2>
-          <span className="home__stat">
-            {todays.length} {todays.length === 1 ? 'task' : 'tasks'}
-            {doneCount > 0 && ` · ${doneCount} done`}
+      <section className="task-page__section">
+        <div className="task-page__section-head">
+          <h2 className="section-title">{searching ? 'Results' : archived ? 'Archived' : 'Today'}</h2>
+          <span className="task-page__stat">
+            {searching || archived
+              ? `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}`
+              : `${todays.length} ${todays.length === 1 ? 'task' : 'tasks'}${doneCount > 0 ? ` · ${doneCount} done` : ''}`}
           </span>
         </div>
 
-        <form className="home__add" onSubmit={add}>
-          <Plus size={16} className="home__add-icon" />
-          <input
-            className="home__add-input"
-            placeholder="Add a task..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </form>
-
-        {todays.length === 0 ? (
-          <p className="empty-state">Nothing on your plate. Add something above, or enjoy the quiet.</p>
-        ) : (
-          <ul className="home__tasks">
-            {todays.map((task) => {
-              const tone = task.due_date ? dueTone(task.due_date) : null
-              const itemName = task.item_id !== null ? items.find((i) => i.id === task.item_id)?.name : null
-              return (
-                <li key={task.id} className={`home__task${task.status === 'done' ? ' is-done' : ''}`}>
-                  <button type="button" className="check-row__box" onClick={() => onToggleTask(task)} aria-label="Toggle done">
-                    {task.status === 'done' && <Check size={12} strokeWidth={3} />}
-                  </button>
-                  <span className="home__task-title">{task.title}</span>
-                  {itemName && (
-                    <button type="button" className="home__task-context" onClick={() => onOpenItem(task.item_id!)}>
-                      {itemName}
-                    </button>
-                  )}
-                  {task.due_date && tone !== 'today' && (
-                    <span className={`due-chip is-${tone}`}>{dueLabel(task.due_date)}</span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+        {!searching && !archived && (
+          <form className="task-add" onSubmit={startAdd}>
+            <Plus size={16} className="task-add__icon" />
+            <input
+              className="task-add__input"
+              placeholder="Add a task..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </form>
         )}
 
-        {active.length > todays.length && (
-          <button type="button" className="home__more" onClick={onOpenTasks}>
-            {active.length - todays.length} more scheduled later <ArrowRight size={14} />
-          </button>
+        {listed.length === 0 ? (
+          <p className="empty-state">
+            {searching
+              ? 'No matches for your search.'
+              : archived
+                ? 'Nothing archived.'
+                : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
+          </p>
+        ) : (
+          <ul className="task-rows">{listed.map(row)}</ul>
+        )}
+
+        {!searching && !archived && later.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="home__more"
+              onClick={() => setShowLater((v) => !v)}
+              aria-expanded={showLater}
+            >
+              <ChevronDown size={14} className={showLater ? 'home__more-icon is-open' : 'home__more-icon'} />
+              {showLater ? 'Hide' : `${later.length} more`} scheduled later
+            </button>
+            {showLater && <ul className="task-rows task-rows--later">{later.map(row)}</ul>}
+          </>
         )}
       </section>
 
-      {upcoming.length > 0 && (
-        <section className="home__section">
+      {!searching && !archived && upcoming.length > 0 && (
+        <section className="task-page__section">
           <h2 className="section-title">Upcoming</h2>
           <ul className="home__upcoming">
             {upcoming.map((item) => {
@@ -146,7 +191,9 @@ export function Home({ name, tasks, items, spaces, onAddTask, onToggleTask, onOp
                       {item.name}
                     </span>
                     <span className="home__item-meta">
-                      {item.date && <span className={`due-chip is-${dueTone(item.date)}`}>{dueLabel(item.date)}</span>}
+                      {item.date && (
+                        <span className={`due-chip is-${dueTone(item.date)}`}>{dueLabel(item.date)}</span>
+                      )}
                       {remaining > 0 && (
                         <span className="home__item-remaining">
                           {remaining} {remaining === 1 ? 'task' : 'tasks'} remaining
@@ -159,6 +206,40 @@ export function Home({ name, tasks, items, spaces, onAddTask, onToggleTask, onOp
             })}
           </ul>
         </section>
+      )}
+
+      {pending !== null && (
+        <AddTaskDialog
+          title={pending}
+          spaces={spaces}
+          items={items}
+          onCancel={() => setPending(null)}
+          onConfirm={async ({ itemId, dueDate }) => {
+            await onAddTask(pending, itemId, dueDate)
+            setPending(null)
+            setTitle('')
+          }}
+        />
+      )}
+
+      {selected && (
+        <Suspense fallback={null}>
+          <TaskDetailPanel
+            task={selected}
+            onClose={() => setSelectedId(null)}
+            onChangePriority={onChangePriority}
+            onChangeDueDate={onChangeDueDate}
+            onRename={onRenameTask}
+            onDelete={async (t) => {
+              await onDeleteTask(t)
+              setSelectedId(null)
+            }}
+            onArchive={async (t) => {
+              await onArchiveTask(t)
+              setSelectedId(null)
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )
