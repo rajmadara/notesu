@@ -18,6 +18,8 @@ export interface Task {
   category: string
   archived: boolean
   user_id: string
+  /** Set on the main list for a task owned by someone else; '' for your own. */
+  owner_name?: string
   due_date: string | null
   item_id: number | null
   page_id: number | null
@@ -58,6 +60,17 @@ export interface Item {
 
 export type PageKind = 'overview' | 'notes' | 'tasks' | 'itinerary' | 'people'
 
+export type ColumnType = 'text' | 'number' | 'select'
+
+/** A user-defined column on a page. `options` only means anything for select. */
+export interface PageColumn {
+  id: string
+  name: string
+  type: ColumnType
+  description: string
+  options: string[]
+}
+
 export interface Page {
   id: number
   item_id: number
@@ -65,6 +78,7 @@ export interface Page {
   name: string
   kind: PageKind
   content: string
+  columns: PageColumn[]
   position: number
   created_at: number
 }
@@ -89,6 +103,8 @@ export interface Person {
   role: string
   contact: string
   note: string
+  /** Values for the page's custom columns, keyed by column id. */
+  fields: Record<string, string>
   position: number
   created_at: number
 }
@@ -141,6 +157,7 @@ export interface ReadPerson {
   role: string
   contact: string
   note: string
+  fields: Record<string, string>
 }
 
 export interface ReadEntry {
@@ -156,6 +173,7 @@ export interface ReadPage {
   name: string
   kind: PageKind
   content: string
+  columns: PageColumn[]
   tasks: ReadTask[]
   entries: ReadEntry[]
   people: ReadPerson[]
@@ -204,6 +222,7 @@ export interface TaskPatch {
   status?: TaskStatus
   priority?: TaskPriority
   due_date?: string | null
+  tags?: string
 }
 
 export interface EntryPatch {
@@ -218,6 +237,7 @@ export interface PersonPatch {
   role?: string
   contact?: string
   note?: string
+  fields?: Record<string, string>
 }
 
 export interface CreateTaskOptions {
@@ -248,6 +268,8 @@ export interface TaskStore {
   resetTaskTimer(userId: string, id: number): Promise<void>
   getNotesForTask(userId: string, taskId: number): Promise<Note[]>
   upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note>
+  /** Every tag the user has actually used, for the picker's dropdown. */
+  getAllTags(userId: string): Promise<string[]>
   getFavoriteTags(userId: string): Promise<string[]>
   addFavoriteTag(userId: string, name: string): Promise<void>
   removeFavoriteTag(userId: string, name: string): Promise<void>
@@ -275,6 +297,7 @@ export interface TaskStore {
   createPage(userId: string, itemId: number, name: string, kind: PageKind): Promise<Page>
   renamePage(userId: string, id: number, name: string): Promise<void>
   setPageContent(userId: string, id: number, content: string): Promise<void>
+  setPageColumns(userId: string, id: number, columns: PageColumn[]): Promise<void>
   deletePage(userId: string, id: number): Promise<void>
 
   // --- Tasks scoped to an item (readable by anyone the item is shared with) ---

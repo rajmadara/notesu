@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from 'express'
 import type { TaskPriority, TaskStatus, TaskStore } from '../store/types.js'
+import { normalizeTags } from '../tags.js'
 
 // Express 4 doesn't catch rejected promises from async handlers on its own.
 function asyncHandler(handler: RequestHandler): RequestHandler {
@@ -122,8 +123,7 @@ export function createTasksRouter(store: TaskStore): Router {
   router.put(
     '/:id/tags',
     asyncHandler(async (req, res) => {
-      const tags = String(req.body.tags ?? '')
-      await store.setTaskTags(req.userId, Number(req.params.id), tags)
+      await store.setTaskTags(req.userId, Number(req.params.id), normalizeTags(req.body.tags))
       res.status(204).end()
     }),
   )

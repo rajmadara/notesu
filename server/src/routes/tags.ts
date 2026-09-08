@@ -11,6 +11,14 @@ function asyncHandler(handler: RequestHandler): RequestHandler {
 export function createTagsRouter(store: TaskStore): Router {
   const router = Router()
 
+  // Every tag the caller has used, for the task panel's dropdown.
+  router.get(
+    '/',
+    asyncHandler(async (req, res) => {
+      res.json(await store.getAllTags(req.userId))
+    }),
+  )
+
   router.get(
     '/favorites',
     asyncHandler(async (req, res) => {

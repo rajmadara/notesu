@@ -382,7 +382,9 @@ export function ItemWorkspace({
           />
         )}
         {current?.kind === 'itinerary' && <ItineraryPage key={current.id} page={current} readOnly={readOnly} />}
-        {current?.kind === 'people' && <PeoplePage key={current.id} page={current} readOnly={readOnly} />}
+        {current?.kind === 'people' && (
+          <PeoplePage key={current.id} page={current} readOnly={readOnly} onPageChanged={load} />
+        )}
       </div>
         </>
       )}

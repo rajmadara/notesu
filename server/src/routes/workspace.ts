@@ -1,5 +1,14 @@
 import { Router, type RequestHandler } from 'express'
-import type { PageKind, SharePermission, TaskPriority, TaskStatus, TaskStore } from '../store/types.js'
+import { normalizeTags } from '../tags.js'
+import type {
+  ColumnType,
+  PageColumn,
+  PageKind,
+  SharePermission,
+  TaskPriority,
+  TaskStatus,
+  TaskStore,
+} from '../store/types.js'
 
 // Express 4 doesn't catch rejected promises from async handlers on its own.
 function asyncHandler(handler: RequestHandler): RequestHandler {
@@ -31,6 +40,58 @@ function name(value: unknown): string {
 }
 
 const str = (value: unknown, max = 2000) => (typeof value === 'string' ? value.slice(0, max) : '')
+
+const COLUMN_TYPES: ColumnType[] = ['text', 'number', 'select']
+const MAX_COLUMNS = 20
+const MAX_OPTIONS = 30
+
+/**
+ * The user-defined columns on a page. Anything unrecognised is dropped rather
+ * than stored, and a column without a usable name is skipped entirely — the
+ * client generates the ids, so they're treated as opaque and length-capped.
+ */
+function columns(value: unknown): PageColumn[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const out: PageColumn[] = []
+  for (const raw of value.slice(0, MAX_COLUMNS)) {
+    if (typeof raw !== 'object' || raw === null) continue
+    const col = raw as Record<string, unknown>
+    const columnId = str(col.id, 40).trim()
+    const columnName = str(col.name, 60).trim()
+    if (!columnId || !columnName || seen.has(columnId)) continue
+    seen.add(columnId)
+    const type: ColumnType = COLUMN_TYPES.includes(col.type as ColumnType)
+      ? (col.type as ColumnType)
+      : 'text'
+    out.push({
+      id: columnId,
+      name: columnName,
+      type,
+      description: str(col.description, 200),
+      options:
+        type === 'select' && Array.isArray(col.options)
+          ? col.options
+              .slice(0, MAX_OPTIONS)
+              .map((o) => str(o, 60).trim())
+              .filter(Boolean)
+          : [],
+    })
+  }
+  return out
+}
+
+/** A row's values for those columns. Everything is stored as text. */
+function fields(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+  const out: Record<string, string> = {}
+  for (const [key, raw] of Object.entries(value).slice(0, MAX_COLUMNS)) {
+    const columnId = key.slice(0, 40)
+    if (!columnId) continue
+    out[columnId] = typeof raw === 'number' ? String(raw) : str(raw, 500)
+  }
+  return out
+}
 
 /**
  * A space icon is either a short emoji string or a small inline image the
@@ -227,6 +288,14 @@ export function createWorkspaceRouter(store: TaskStore): Router {
     }),
   )
 
+  router.put(
+    '/pages/:id/columns',
+    asyncHandler(async (req, res) => {
+      await store.setPageColumns(req.userId, id(req.params.id), columns(req.body?.columns))
+      res.status(204).end()
+    }),
+  )
+
   router.delete(
     '/pages/:id',
     asyncHandler(async (req, res) => {
@@ -284,6 +353,7 @@ export function createWorkspaceRouter(store: TaskStore): Router {
         ...(STATUSES.includes(body.status) ? { status: body.status } : {}),
         ...(PRIORITIES.includes(body.priority) ? { priority: body.priority } : {}),
         ...('due_date' in body ? { due_date: dateOrNull(body.due_date) } : {}),
+        ...('tags' in body ? { tags: normalizeTags(body.tags) } : {}),
       })
       res.status(204).end()
     }),
@@ -362,6 +432,7 @@ export function createWorkspaceRouter(store: TaskStore): Router {
           role: str(body.role, 200),
           contact: str(body.contact, 300),
           note: str(body.note, 2000),
+          fields: fields(body.fields),
         }),
       )
     }),
@@ -376,6 +447,7 @@ export function createWorkspaceRouter(store: TaskStore): Router {
         ...(typeof body.role === 'string' ? { role: str(body.role, 200) } : {}),
         ...(typeof body.contact === 'string' ? { contact: str(body.contact, 300) } : {}),
         ...(typeof body.note === 'string' ? { note: str(body.note, 2000) } : {}),
+        ...('fields' in body ? { fields: fields(body.fields) } : {}),
       })
       res.status(204).end()
     }),

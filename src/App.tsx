@@ -13,6 +13,7 @@ import {
   setTaskDueDate,
   setTaskPriority,
   setTaskStatus,
+  setTaskTags,
   setTaskTitle,
 } from './lib/db'
 import {
@@ -185,6 +186,11 @@ function App() {
     await refreshTasks()
   }
 
+  async function handleChangeTags(task: Task, tags: string[]) {
+    await setTaskTags(task.id, tags)
+    await refreshTasks()
+  }
+
   async function handleArchiveTask(task: Task) {
     await setTaskArchived(task.id, !task.archived)
     await refreshTasks()
@@ -345,6 +351,7 @@ function App() {
               name={firstName}
               tasks={tasks}
               items={items}
+              sharedItems={sharedItems}
               spaces={spaces}
               view={view}
               searchResults={searchResults}
@@ -353,6 +360,7 @@ function App() {
               onRenameTask={handleRenameTask}
               onChangePriority={handleChangePriority}
               onChangeDueDate={handleChangeDueDate}
+              onChangeTags={handleChangeTags}
               onArchiveTask={handleArchiveTask}
               onDeleteTask={handleDeleteTask}
               onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}

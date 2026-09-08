@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check, Users } from 'lucide-react'
 import type { Task } from '../../lib/types'
 import { dueLabel, dueTone } from '../../lib/date'
 
@@ -61,6 +61,13 @@ export function TaskRow({
       <button type="button" className="task-row__title" onClick={() => onOpen(task)} title="Open task">
         {task.title}
       </button>
+
+      {task.owner_name && (
+        <span className="task-row__owner" title={`Shared with you by ${task.owner_name}`}>
+          <Users size={11} />
+          {task.owner_name}
+        </span>
+      )}
 
       {itemName && task.item_id !== null && (
         <button

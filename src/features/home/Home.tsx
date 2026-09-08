@@ -8,6 +8,8 @@ import { EntityIcon } from '../workspace/EntityIcon'
 import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 import { AddTaskDialog } from '../tasks/AddTaskDialog'
 import { TaskRow } from '../tasks/TaskRow'
+import { TaskFilters } from '../tasks/TaskFilters'
+import { NO_FILTERS, isFiltering, matchesFilters, type Filters } from '../../lib/taskFilters'
 
 // ~390kB of editor, only once someone opens a task.
 const TaskDetailPanel = lazy(() =>
@@ -18,6 +20,8 @@ interface Props {
   name: string
   tasks: Task[]
   items: Item[]
+  /** Items shared with the user — needed to name the item a shared task sits on. */
+  sharedItems: Item[]
   spaces: Space[]
   view: TaskView
   searchResults: Task[] | null
@@ -26,6 +30,7 @@ interface Props {
   onRenameTask: (task: Task, title: string) => Promise<void>
   onChangePriority: (task: Task, priority: TaskPriority) => Promise<void>
   onChangeDueDate: (task: Task, dueDate: string | null) => Promise<void>
+  onChangeTags: (task: Task, tags: string[]) => Promise<void>
   onArchiveTask: (task: Task) => Promise<void>
   onDeleteTask: (task: Task) => Promise<void>
   onOpenItem: (itemId: number) => void
@@ -40,6 +45,7 @@ export function Home({
   name,
   tasks,
   items,
+  sharedItems,
   spaces,
   view,
   searchResults,
@@ -48,6 +54,7 @@ export function Home({
   onRenameTask,
   onChangePriority,
   onChangeDueDate,
+  onChangeTags,
   onArchiveTask,
   onDeleteTask,
   onOpenItem,
@@ -56,6 +63,7 @@ export function Home({
   const [pending, setPending] = useState<string | null>(null)
   const [showLater, setShowLater] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS)
 
   const searching = searchResults !== null
   const archived = view === 'archived'
@@ -69,14 +77,20 @@ export function Home({
   // "Today" is the actionable set: anything due by today, plus everything with
   // no date at all. Dated-for-later waits behind the toggle.
   const todays = active.filter((t) => !t.due_date || t.due_date <= today).sort(byUrgency)
-  const later = active.filter((t) => t.due_date && t.due_date > today).sort(byUrgency)
-  const doneCount = todays.filter((t) => t.status === 'done').length
+  const later = active
+    .filter((t) => t.due_date && t.due_date > today)
+    .filter((t) => matchesFilters(t, filters))
+    .sort(byUrgency)
+  const doneCount = todays.filter((t) => matchesFilters(t, filters) && t.status === 'done').length
 
-  const listed = searching
-    ? [...searchResults].sort(byUrgency)
+  // The bar's options come from the unfiltered set, so choosing one filter
+  // never hides the others.
+  const inScope = searching
+    ? searchResults
     : archived
-      ? tasks.filter((t) => t.archived).sort(byUrgency)
+      ? tasks.filter((t) => t.archived)
       : todays
+  const listed = inScope.filter((t) => matchesFilters(t, filters)).sort(byUrgency)
 
   const remainingByItem = new Map<number, number>()
   for (const t of active) {
@@ -84,7 +98,8 @@ export function Home({
       remainingByItem.set(t.item_id, (remainingByItem.get(t.item_id) ?? 0) + 1)
     }
   }
-  const upcoming = items
+  const allItems = [...items, ...sharedItems]
+  const upcoming = allItems
     .filter((i) => (i.date && i.date >= today) || (remainingByItem.get(i.id) ?? 0) > 0)
     .sort((a, b) => {
       if (a.date && b.date) return a.date.localeCompare(b.date)
@@ -107,7 +122,7 @@ export function Home({
     <TaskRow
       key={task.id}
       task={task}
-      itemName={task.item_id !== null ? items.find((i) => i.id === task.item_id)?.name : undefined}
+      itemName={task.item_id !== null ? allItems.find((i) => i.id === task.item_id)?.name : undefined}
       hideTodayChip={!archived && !searching}
       onToggle={onToggleTask}
       onOpen={(t) => setSelectedId(t.id)}
@@ -132,9 +147,16 @@ export function Home({
           <span className="task-page__stat">
             {searching || archived
               ? `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}`
-              : `${todays.length} ${todays.length === 1 ? 'task' : 'tasks'}${doneCount > 0 ? ` · ${doneCount} done` : ''}`}
+              : `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}${doneCount > 0 ? ` · ${doneCount} done` : ''}`}
           </span>
         </div>
+
+        <TaskFilters
+          tasks={inScope}
+          items={allItems}
+          filters={filters}
+          onChange={setFilters}
+        />
 
         {!searching && !archived && (
           <form className="task-add" onSubmit={startAdd}>
@@ -150,11 +172,13 @@ export function Home({
 
         {listed.length === 0 ? (
           <p className="empty-state">
-            {searching
-              ? 'No matches for your search.'
-              : archived
-                ? 'Nothing archived.'
-                : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
+            {isFiltering(filters)
+              ? 'Nothing matches these filters.'
+              : searching
+                ? 'No matches for your search.'
+                : archived
+                  ? 'Nothing archived.'
+                  : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
           </p>
         ) : (
           <ul className="task-rows">{listed.map(row)}</ul>
@@ -229,6 +253,7 @@ export function Home({
             onClose={() => setSelectedId(null)}
             onChangePriority={onChangePriority}
             onChangeDueDate={onChangeDueDate}
+            onChangeTags={onChangeTags}
             onRename={onRenameTask}
             onDelete={async (t) => {
               await onDeleteTask(t)

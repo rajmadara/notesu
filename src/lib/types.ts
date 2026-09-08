@@ -17,6 +17,8 @@ export interface Task {
   tags: string
   category: string
   archived: boolean
+  /** Who owns it, when that isn't you — set on the main list for shared work. */
+  owner_name?: string
   due_date: string | null
   item_id: number | null
   page_id: number | null
@@ -55,12 +57,27 @@ export interface Item {
 
 export type PageKind = 'overview' | 'notes' | 'tasks' | 'itinerary' | 'people'
 
+export type ColumnType = 'text' | 'number' | 'select'
+
+/**
+ * A column the user added to a page. Every row on the page carries a value for
+ * it in `fields`, keyed by `id` — so renaming a column keeps the data.
+ */
+export interface PageColumn {
+  id: string
+  name: string
+  type: ColumnType
+  description: string
+  options: string[]
+}
+
 export interface Page {
   id: number
   item_id: number
   name: string
   kind: PageKind
   content: string
+  columns: PageColumn[]
   position: number
   created_at: number
 }
@@ -83,6 +100,8 @@ export interface Person {
   role: string
   contact: string
   note: string
+  /** Values for the page's custom columns, keyed by column id. */
+  fields: Record<string, string>
   position: number
   created_at: number
 }
@@ -131,6 +150,7 @@ export interface ReadPerson {
   role: string
   contact: string
   note: string
+  fields: Record<string, string>
 }
 
 export interface ReadEntry {
@@ -146,6 +166,7 @@ export interface ReadPage {
   name: string
   kind: PageKind
   content: string
+  columns: PageColumn[]
   tasks: ReadTask[]
   entries: ReadEntry[]
   people: ReadPerson[]

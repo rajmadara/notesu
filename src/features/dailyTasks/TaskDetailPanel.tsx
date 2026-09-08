@@ -4,6 +4,7 @@ import { formatNote, getNotesForTask, upsertTaskNote } from '../../lib/db'
 import { formatTimestamp } from '../../lib/date'
 import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
+import { TagPicker } from '../tasks/TagPicker'
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: 'urgent_important', label: 'Urgent & important' },
@@ -18,6 +19,7 @@ interface Props {
   onDelete: (task: Task) => void
   onChangePriority: (task: Task, priority: TaskPriority) => void
   onChangeDueDate: (task: Task, dueDate: string | null) => void
+  onChangeTags: (task: Task, tags: string[]) => void
   onRename: (task: Task, title: string) => void
   /** Offered where the row has no menu of its own; omitted inside an item. */
   onArchive?: (task: Task) => void
@@ -36,6 +38,7 @@ export function TaskDetailPanel({
   onDelete,
   onChangePriority,
   onChangeDueDate,
+  onChangeTags,
   onRename,
   onArchive,
   loadNotes = getNotesForTask,
@@ -183,6 +186,11 @@ export function TaskDetailPanel({
               value={task.due_date ?? ''}
               onChange={(e) => onChangeDueDate(task, e.target.value || null)}
             />
+          </div>
+
+          <div className="task-detail-panel__field">
+            <label className="task-detail-panel__label">Tags</label>
+            <TagPicker value={task.tags} onChange={(tags) => onChangeTags(task, tags)} />
           </div>
 
           <div className="task-detail-panel__field">

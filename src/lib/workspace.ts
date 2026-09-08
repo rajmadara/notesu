@@ -6,6 +6,7 @@ import type {
   ItemShare,
   Note,
   Page,
+  PageColumn,
   PageEntry,
   PageKind,
   Person,
@@ -67,6 +68,8 @@ export const renamePage = (id: number, name: string) =>
   request<void>(`/pages/${id}/name`, put({ name }))
 export const setPageContent = (id: number, content: string) =>
   request<void>(`/pages/${id}/content`, put({ content }))
+export const setPageColumns = (id: number, columns: PageColumn[]) =>
+  request<void>(`/pages/${id}/columns`, put({ columns }))
 export const deletePage = (id: number) => request<void>(`/pages/${id}`, del)
 
 // --- Tasks inside an item ---
@@ -80,6 +83,7 @@ export interface ItemTaskPatch {
   status?: TaskStatus
   priority?: TaskPriority
   due_date?: string | null
+  tags?: string[]
 }
 export const updateItemTask = (id: number, patch: ItemTaskPatch) =>
   request<void>(`/tasks/${id}`, put(patch))
@@ -113,6 +117,7 @@ export interface PersonInput {
   role: string
   contact: string
   note: string
+  fields: Record<string, string>
 }
 export const getPeople = (pageId: number) => request<Person[]>(`/pages/${pageId}/people`)
 export const createPerson = (pageId: number, person: PersonInput) =>

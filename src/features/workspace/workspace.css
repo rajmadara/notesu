@@ -1391,9 +1391,26 @@
 }
 
 .read__person-contact {
-  margin-left: auto;
   font-size: 13px;
   color: var(--text);
+}
+
+/* About and any custom columns wrap onto their own line under the name. */
+.read__person-about,
+.read__person-field {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.read__person-field-name {
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
 }
 
 /* ---------- Notes page ---------- */
@@ -1628,120 +1645,182 @@
   align-self: flex-start;
 }
 
-/* ---------- People page ---------- */
+/* ---------- Table pages (People, and whatever comes next) ---------- */
 
-.page-people {
-  max-width: 680px;
-}
-
-.people-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.person {
-  display: grid;
-  grid-template-columns: 30px 1.2fr 1fr 1.2fr auto;
-  align-items: center;
+.page-table {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  transition: background-color 0.15s ease;
 }
 
-.person:hover {
+/* The table is the only thing allowed to scroll sideways — the page must not. */
+.table-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table__head {
+  padding: 0 8px 7px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.table__head--name {
+  min-width: 160px;
+}
+
+.table__head--note {
+  min-width: 220px;
+}
+
+.table__head--add {
+  width: 36px;
+  padding-bottom: 4px;
+}
+
+.table__head-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.table__hint {
+  display: inline-flex;
+  color: var(--text);
+  opacity: 0.6;
+  cursor: help;
+}
+
+/* Column controls stay out of the way until the header is hovered. */
+.table__head-actions {
+  display: inline-flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.table__head:hover .table__head-actions,
+.table__head-actions:focus-within {
+  opacity: 1;
+}
+
+.table td {
+  padding: 1px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table tr:hover td {
   background: var(--page-bg);
 }
 
-.person--add {
-  margin-bottom: 10px;
-  padding: 8px;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-}
-
-.person--add:focus-within {
-  border-style: solid;
-  border-color: var(--accent-border);
-  background: var(--bg);
-}
-
-.person__avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.person__avatar--add {
-  color: var(--text);
-  background: none;
-  border: 1.5px dashed var(--border);
+.table__input,
+.table__select {
+  width: 100%;
+  min-width: 110px;
   box-sizing: border-box;
-}
-
-.person__name,
-.person__role,
-.person__contact {
-  min-width: 0;
+  padding: 7px 8px;
   border: none;
   outline: none;
-  background: none;
+  border-radius: 6px;
   font: inherit;
   font-size: 14px;
   color: var(--text-h);
-  padding: 4px 6px;
-  border-radius: 6px;
+  background: none;
 }
 
-.person__name {
-  font-weight: 500;
-}
-
-.person__role,
-.person__contact {
-  color: var(--text);
-}
-
-.person__name:focus:not(:read-only),
-.person__role:focus:not(:read-only),
-.person__contact:focus:not(:read-only) {
+.table__input:focus:not(:read-only),
+.table__select:focus {
   background: var(--bg);
   box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 
-.person__delete {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  color: var(--text);
-  background: none;
+.table__select {
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  appearance: none;
 }
 
-.person:hover .person__delete,
-.person__delete:focus-visible {
+.table__row-actions {
+  width: 32px;
+  text-align: right;
+}
+
+.table__row-actions .icon-btn {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.table tr:hover .table__row-actions .icon-btn,
+.table__row-actions .icon-btn:focus-visible {
   opacity: 1;
 }
 
-.person__delete:hover {
-  color: var(--danger);
-  background: var(--danger-bg);
+.table__add-row td {
+  border-bottom: none;
 }
+
+.table__add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  color: var(--text);
+}
+
+.table__add-icon {
+  flex: none;
+  opacity: 0.7;
+}
+
+.table__add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: none;
+}
+
+/* ---------- Column dialog ---------- */
+
+.kind-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.option-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.option-row__add {
+  align-self: flex-start;
+}
+
 
 /* ---------- Sidebar additions: the spaces tree, New, settings ---------- */
 

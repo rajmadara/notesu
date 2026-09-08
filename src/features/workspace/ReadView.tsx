@@ -87,6 +87,17 @@ function PageSection({ page }: { page: ReadPage }) {
               <span className="read__person-name">{person.name}</span>
               {person.role && <span className="read__person-role">{person.role}</span>}
               {person.contact && <span className="read__person-contact">{person.contact}</span>}
+              {person.note && <span className="read__person-about">{person.note}</span>}
+              {page.columns.map((column) => {
+                const value = person.fields?.[column.id]
+                if (!value) return null
+                return (
+                  <span key={column.id} className="read__person-field">
+                    <span className="read__person-field-name">{column.name}</span>
+                    {value}
+                  </span>
+                )
+              })}
             </li>
           ))}
         </ul>

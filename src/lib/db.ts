@@ -111,6 +111,18 @@ export async function setTaskPriority(
   })
 }
 
+/** Every tag the user has used, for the picker's dropdown. */
+export async function getAllTags(): Promise<string[]> {
+  return apiRequest<string[]>(`${API_ORIGIN}/api/tags`, '')
+}
+
+export async function setTaskTags(id: number, tags: string[]): Promise<void> {
+  await request<void>(`/${id}/tags`, {
+    method: 'PUT',
+    body: JSON.stringify({ tags }),
+  })
+}
+
 export async function setTaskArchived(id: number, archived: boolean): Promise<void> {
   await request<void>(`/${id}/archive`, {
     method: 'PUT',

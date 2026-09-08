@@ -129,6 +129,7 @@ export function TasksPage({ page, tasks, readOnly, onChanged }: Props) {
             onClose={() => setSelectedId(null)}
             onChangePriority={(t, priority: TaskPriority) => patch(t, { priority })}
             onChangeDueDate={(t, due_date) => patch(t, { due_date })}
+            onChangeTags={(t, tags) => patch(t, { tags })}
             onRename={(t, title) => patch(t, { title })}
             onDelete={async (t) => {
               await remove(t)

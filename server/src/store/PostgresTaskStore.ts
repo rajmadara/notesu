@@ -14,6 +14,7 @@ import type {
   ItemShare,
   Note,
   Page,
+  PageColumn,
   PageEntry,
   PageKind,
   Person,
@@ -54,6 +55,7 @@ const MIGRATIONS = [
   '0009_item_icons.sql',
   '0010_space_shares.sql',
   '0011_tasks_page_kind.sql',
+  '0012_page_columns.sql',
 ]
 
 /** Most-permissive wins when someone holds both a space and an item share. */
@@ -103,12 +105,39 @@ interface Access {
 
 const OWNER_NAME_SQL = `COALESCE(u.raw_user_meta_data->>'full_name', u.email, 'Someone')`
 
+/**
+ * Every task $1 can see: their own, plus anything on an item shared with them
+ * directly or through its space. Columns are listed rather than starred so no
+ * other person's user_id travels to the client. Callers append their own
+ * further conditions and an ORDER BY.
+ */
+const VISIBLE_TASKS_SQL = `
+  SELECT t.id, t.title, t.status, t.seconds, t.running_since, t.date, t.created_at,
+         t.priority, t.tags, t.category, t.archived, t.due_date, t.item_id, t.page_id,
+         CASE WHEN t.user_id = $1 THEN '' ELSE ${OWNER_NAME_SQL} END AS owner_name
+    FROM tasks t
+    JOIN auth.users u ON u.id = t.user_id
+    LEFT JOIN items i ON i.id = t.item_id
+    CROSS JOIN (SELECT lower(email) AS email FROM auth.users WHERE id = $1) me
+   WHERE (t.user_id = $1
+          OR EXISTS (SELECT 1 FROM item_shares s
+                      WHERE s.item_id = i.id AND s.email = me.email)
+          OR EXISTS (SELECT 1 FROM space_shares sp
+                      WHERE sp.space_id = i.space_id AND sp.email = me.email))`
+
 export class PostgresTaskStore implements TaskStore {
   constructor(private pool: pg.Pool) {}
 
+  /**
+   * The caller's own tasks, plus the tasks on any item shared with them — the
+   * two together are what a person actually has to do, so the main list shows
+   * both. Someone else's task carries owner_name so it can be labelled;
+   * the caller's own comes back blank.
+   */
   async getAllTasks(userId: string): Promise<Task[]> {
     const { rows } = await this.pool.query<Task>(
-      'SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC',
+      `${VISIBLE_TASKS_SQL}
+       ORDER BY t.created_at DESC`,
       [userId],
     )
     return rows
@@ -116,9 +145,9 @@ export class PostgresTaskStore implements TaskStore {
 
   async searchTasks(userId: string, query: string): Promise<Task[]> {
     const { rows } = await this.pool.query<Task>(
-      `SELECT DISTINCT t.* FROM tasks t
-       LEFT JOIN notes n ON n.task_id = t.id
-       WHERE t.user_id = $1 AND (t.title ILIKE $2 OR n.content ILIKE $2)
+      `${VISIBLE_TASKS_SQL}
+         AND (t.title ILIKE $2 OR EXISTS (
+               SELECT 1 FROM notes n WHERE n.task_id = t.id AND n.content ILIKE $2))
        ORDER BY t.created_at DESC`,
       [userId, `%${query}%`],
     )
@@ -156,64 +185,52 @@ export class PostgresTaskStore implements TaskStore {
     return rows[0]
   }
 
+  /**
+   * Writes go through taskAccess, not `WHERE user_id = ...`. The main list now
+   * shows tasks on shared items, so ticking one there has to reach a row the
+   * caller doesn't own — a user_id filter would silently update nothing.
+   */
+  private async writeTaskField(
+    userId: string,
+    id: number,
+    column: 'title' | 'status' | 'priority' | 'tags' | 'category' | 'archived' | 'due_date',
+    value: unknown,
+  ): Promise<void> {
+    this.requireWrite(await this.taskAccess(userId, id))
+    await this.pool.query(`UPDATE tasks SET ${column} = $1 WHERE id = $2`, [value, id])
+  }
+
   async deleteTask(userId: string, id: number): Promise<void> {
-    await this.pool.query('DELETE FROM tasks WHERE id = $1 AND user_id = $2', [id, userId])
+    this.requireWrite(await this.taskAccess(userId, id))
+    await this.pool.query('DELETE FROM tasks WHERE id = $1', [id])
   }
 
   async setTaskTitle(userId: string, id: number, title: string): Promise<void> {
-    await this.pool.query('UPDATE tasks SET title = $1 WHERE id = $2 AND user_id = $3', [
-      title,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'title', title)
   }
 
   async setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void> {
-    await this.pool.query('UPDATE tasks SET status = $1 WHERE id = $2 AND user_id = $3', [
-      status,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'status', status)
   }
 
   async setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void> {
-    await this.pool.query('UPDATE tasks SET priority = $1 WHERE id = $2 AND user_id = $3', [
-      priority,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'priority', priority)
   }
 
   async setTaskTags(userId: string, id: number, tags: string): Promise<void> {
-    await this.pool.query('UPDATE tasks SET tags = $1 WHERE id = $2 AND user_id = $3', [
-      tags,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'tags', tags)
   }
 
   async setTaskCategory(userId: string, id: number, category: string): Promise<void> {
-    await this.pool.query('UPDATE tasks SET category = $1 WHERE id = $2 AND user_id = $3', [
-      category,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'category', category)
   }
 
   async setTaskArchived(userId: string, id: number, archived: boolean): Promise<void> {
-    await this.pool.query('UPDATE tasks SET archived = $1 WHERE id = $2 AND user_id = $3', [
-      archived,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'archived', archived)
   }
 
   async setTaskDueDate(userId: string, id: number, dueDate: string | null): Promise<void> {
-    await this.pool.query('UPDATE tasks SET due_date = $1 WHERE id = $2 AND user_id = $3', [
-      dueDate,
-      id,
-      userId,
-    ])
+    await this.writeTaskField(userId, id, 'due_date', dueDate)
   }
 
   async startTaskTimer(userId: string, id: number): Promise<number> {
@@ -247,38 +264,30 @@ export class PostgresTaskStore implements TaskStore {
     )
   }
 
+  // Notes are authorised the same way as the task itself, so a note can be
+  // read and written on a shared task opened from the main list.
   async getNotesForTask(userId: string, taskId: number): Promise<Note[]> {
-    const { rows } = await this.pool.query<Note>(
-      `SELECT n.* FROM notes n
-       JOIN tasks t ON t.id = n.task_id
-       WHERE n.task_id = $1 AND t.user_id = $2
-       ORDER BY n.created_at ASC`,
-      [taskId, userId],
-    )
-    return rows
+    return this.getItemTaskNotes(userId, taskId)
   }
 
   async upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note> {
-    const now = Math.floor(Date.now() / 1000)
-    const existing = await this.getNotesForTask(userId, taskId)
-    if (existing.length > 0) {
-      const { rows } = await this.pool.query<Note>(
-        'UPDATE notes SET content = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-        [content, now, existing[0].id],
-      )
-      return rows[0]
-    }
-    const today = new Date().toISOString().slice(0, 10)
-    const { rows } = await this.pool.query<Note>(
-      `INSERT INTO notes (task_id, content, date, updated_at)
-       SELECT $1, $2, $3, $4 WHERE EXISTS (SELECT 1 FROM tasks WHERE id = $1 AND user_id = $5)
-       RETURNING *`,
-      [taskId, content, today, now, userId],
+    return this.upsertItemTaskNote(userId, taskId, content)
+  }
+
+  /**
+   * The tags in use across the caller's tasks, so the picker can offer them
+   * without any separate bookkeeping — typing a new one makes it available
+   * everywhere next time.
+   */
+  async getAllTags(userId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ tag: string }>(
+      `SELECT DISTINCT btrim(tag) AS tag
+       FROM tasks, unnest(string_to_array(tags, ',')) AS tag
+       WHERE user_id = $1 AND btrim(tag) <> ''
+       ORDER BY tag`,
+      [userId],
     )
-    if (!rows[0]) {
-      throw notFound('Task')
-    }
-    return rows[0]
+    return rows.map((r) => r.tag)
   }
 
   async getFavoriteTags(userId: string): Promise<string[]> {
@@ -578,6 +587,14 @@ export class PostgresTaskStore implements TaskStore {
     await this.pool.query('UPDATE pages SET content = $1 WHERE id = $2', [content, id])
   }
 
+  async setPageColumns(userId: string, id: number, columns: PageColumn[]): Promise<void> {
+    this.requireWrite(await this.pageAccess(userId, id))
+    await this.pool.query('UPDATE pages SET columns = $1 WHERE id = $2', [
+      JSON.stringify(columns),
+      id,
+    ])
+  }
+
   async deletePage(userId: string, id: number): Promise<void> {
     const { page } = this.requireWrite(await this.pageAccess(userId, id))
     if (page.kind === 'overview') throw forbidden('The Overview page can’t be removed')
@@ -667,7 +684,7 @@ export class PostgresTaskStore implements TaskStore {
     this.requireWrite(await this.taskAccess(userId, taskId))
     const sets: string[] = []
     const values: unknown[] = []
-    for (const key of ['title', 'status', 'priority', 'due_date'] as const) {
+    for (const key of ['title', 'status', 'priority', 'due_date', 'tags'] as const) {
       if (patch[key] === undefined) continue
       values.push(patch[key])
       sets.push(`${key} = $${values.length}`)
@@ -750,11 +767,11 @@ export class PostgresTaskStore implements TaskStore {
   ): Promise<Person> {
     const { ownerId } = this.requireWrite(await this.pageAccess(userId, pageId))
     const { rows } = await this.pool.query<Person>(
-      `INSERT INTO people (page_id, user_id, name, role, contact, note, position)
-       VALUES ($1, $2, $3, $4, $5, $6,
+      `INSERT INTO people (page_id, user_id, name, role, contact, note, fields, position)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,
                COALESCE((SELECT MAX(position) + 1 FROM people WHERE page_id = $1), 0))
        RETURNING *`,
-      [pageId, ownerId, person.name, person.role, person.contact, person.note],
+      [pageId, ownerId, person.name, person.role, person.contact, person.note, JSON.stringify(person.fields)],
     )
     return rows[0]
   }
@@ -767,6 +784,11 @@ export class PostgresTaskStore implements TaskStore {
       if (patch[key] === undefined) continue
       values.push(patch[key])
       sets.push(`${key} = $${values.length}`)
+    }
+    // Merged rather than replaced, so saving one cell can't drop the others.
+    if (patch.fields !== undefined) {
+      values.push(JSON.stringify(patch.fields))
+      sets.push(`fields = fields || $${values.length}::jsonb`)
     }
     if (sets.length === 0) return
     values.push(id)
@@ -906,7 +928,7 @@ export class PostgresTaskStore implements TaskStore {
       [itemId],
     )
     const { rows: people } = await this.pool.query<ReadPerson & { page_id: number }>(
-      `SELECT pe.id, pe.page_id, pe.name, pe.role, pe.contact, pe.note
+      `SELECT pe.id, pe.page_id, pe.name, pe.role, pe.contact, pe.note, pe.fields
        FROM people pe JOIN pages p ON p.id = pe.page_id
        WHERE p.item_id = $1 ORDER BY pe.position, pe.id`,
       [itemId],
@@ -929,6 +951,7 @@ export class PostgresTaskStore implements TaskStore {
         name: page.name,
         kind: page.kind,
         content: page.content,
+        columns: page.columns,
         tasks: tasks
           .filter((t) => t.page_id === page.id)
           .map((t) => ({
@@ -942,7 +965,7 @@ export class PostgresTaskStore implements TaskStore {
           .map(({ id, day, time, title, note }) => ({ id, day, time, title, note })),
         people: people
           .filter((p) => p.page_id === page.id)
-          .map(({ id, name, role, contact, note }) => ({ id, name, role, contact, note })),
+          .map(({ id, name, role, contact, note, fields }) => ({ id, name, role, contact, note, fields })),
       })),
     }
   }
