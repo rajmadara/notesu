@@ -607,6 +607,14 @@
   text-align: left;
 }
 
+/* The mark sits above the title in the app's accent, so the signed-out page
+   carries the brand rather than just the word. */
+.welcome__mark {
+  display: flex;
+  margin-bottom: 18px;
+  color: var(--accent);
+}
+
 .welcome__title {
   font-size: 32px;
   font-weight: 600;

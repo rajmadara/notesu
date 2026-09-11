@@ -1,30 +1,66 @@
 interface Props {
+  /** Height in px; the mark is slightly narrower than tall (315:345). */
   size?: number
+  /**
+   * In viewBox units. The drawing's own line is 9, but scaled down to sidebar
+   * sizes that lands under a pixel and turns grey, so the default is heavier.
+   * Large uses (the welcome page) pass something closer to the original.
+   */
+  strokeWidth?: number
 }
 
+// The mark's measured ink bounds rather than a loose box, so it fills whatever
+// size it's given instead of rendering with invisible padding around it.
+const VIEW_BOX = '11 20 287 312'
+const W = 287
+const H = 312
+
+// The coil rings, evenly spaced down the binding edge. Each is a hook that
+// wraps the cover's left edge and ends in a dot where the wire meets the page.
+const RING_Y = [80, 143, 206, 269]
+
 /**
- * The folded-note-page mark from the favicon (public/favicon.svg), redrawn
- * with currentColor so it picks up the theme instead of the baked-in teal.
+ * The spiral notebook mark: a bound cover with the page edge showing at the
+ * top right, four coil rings, and an N whose loose ends are capped with dots.
+ *
+ * Dot radii are derived from strokeWidth rather than fixed, so the drawing
+ * keeps its proportions when the line is thickened for small sizes — otherwise
+ * a heavier stroke swallows the dots.
  */
-export function NotesuMark({ size = 22 }: Props) {
+export function NotesuMark({ size = 22, strokeWidth = 16 }: Props) {
+  const ringDot = strokeWidth * 1.11
+  const letterDot = strokeWidth * 1.22
+
   return (
     <svg
-      viewBox="0 0 32 32"
-      width={size}
+      viewBox={VIEW_BOX}
+      width={size * (W / H)}
       height={size}
       fill="none"
       stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path
-        d="M8.5 2.5h10l6 6v18.5a2.5 2.5 0 0 1-2.5 2.5H8.5A2.5 2.5 0 0 1 6 27V5a2.5 2.5 0 0 1 2.5-2.5z"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="M18.5 2.5v4a2 2 0 0 0 2 2h4" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M11.8 12v2.6a3.5 3.5 0 0 0 7 0V12" strokeWidth="1.9" strokeLinecap="round" />
-      <path d="M10.2 21.8h10.1M10.2 25.5h4" strokeWidth="1.9" strokeLinecap="round" />
-      <circle cx="17.5" cy="25.5" r="0.95" fill="currentColor" stroke="none" />
+      {/* Page edge, peeking out behind the cover's top-right corner. */}
+      <path d="M210 62H258A30 30 0 0 1 288 92V288" />
+      <rect x="48" y="30" width="222" height="292" rx="30" />
+
+      {RING_Y.map((y) => (
+        <path key={y} d={`M38 ${y + 35}C18 ${y + 31} 14 ${y - 1} 34 ${y - 5}C48 ${y - 7} 66 ${y - 5} 82 ${y - 1}`} />
+      ))}
+
+      {/* Bottom-left up, diagonal down, right leg up — one continuous N. */}
+      <path d="M128 238L128 118L216 240L216 128" />
+
+      <g fill="currentColor" stroke="none">
+        {RING_Y.map((y) => (
+          <circle key={y} cx="85" cy={y} r={ringDot} />
+        ))}
+        <circle cx="128" cy="238" r={letterDot} />
+        <circle cx="216" cy="128" r={letterDot} />
+      </g>
     </svg>
   )
 }

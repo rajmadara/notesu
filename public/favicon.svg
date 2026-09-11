@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <path d="M8.5 2.5h10l6 6v18.5a2.5 2.5 0 0 1-2.5 2.5H8.5A2.5 2.5 0 0 1 6 27V5a2.5 2.5 0 0 1 2.5-2.5z" fill="none" stroke="#0f766e" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M18.5 2.5v4a2 2 0 0 0 2 2h4" fill="none" stroke="#0f766e" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M11.8 12v2.6a3.5 3.5 0 0 0 7 0V12" fill="none" stroke="#0f766e" stroke-width="1.9" stroke-linecap="round"/>
-  <path d="M10.2 21.8h10.1M10.2 25.5h4" fill="none" stroke="#0f766e" stroke-width="1.9" stroke-linecap="round"/>
-  <circle cx="17.5" cy="25.5" r="0.95" fill="#0f766e"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Scaled to the mark's measured ink bounds (not its nominal viewBox), so it
+       fills the tab icon edge to edge instead of sitting in padding. The line is
+       much heavier than the drawing's own: at tab size the true proportion
+       lands well under a pixel. -->
+  <g transform="translate(1.12 -3.2) scale(0.2)" fill="none" stroke="#0f766e" stroke-width="18"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M210 62H258A30 30 0 0 1 288 92V288"/>
+    <rect x="48" y="30" width="222" height="292" rx="30"/>
+    <path d="M38 115C18 111 14 79 34 75C48 73 66 75 82 79"/>
+    <path d="M38 178C18 174 14 142 34 138C48 136 66 138 82 142"/>
+    <path d="M38 241C18 237 14 205 34 201C48 199 66 201 82 205"/>
+    <path d="M38 304C18 300 14 268 34 264C48 262 66 264 82 268"/>
+    <path d="M128 238L128 118L216 240L216 128"/>
+    <g fill="#0f766e" stroke="none">
+      <circle cx="85" cy="80" r="20"/>
+      <circle cx="85" cy="143" r="20"/>
+      <circle cx="85" cy="206" r="20"/>
+      <circle cx="85" cy="269" r="20"/>
+      <circle cx="128" cy="238" r="22"/>
+      <circle cx="216" cy="128" r="22"/>
+    </g>
+  </g>
 </svg>
