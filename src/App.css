@@ -146,9 +146,12 @@
   transition: background-color 0.15s ease;
 }
 
+/* No background wash here — the wordmark is already accent-coloured, and a
+   translucent film over the sidebar's off-white looked muddy rather than
+   clean (it read fine on plain white, but not here). */
 .sidebar__brand:hover,
 .sidebar__brand.is-active {
-  background: var(--accent-bg);
+  background: none;
 }
 
 .sidebar-rail__brand {
@@ -162,7 +165,7 @@
 
 .sidebar-rail__brand:hover,
 .sidebar-rail__brand.is-active {
-  background: var(--accent-bg);
+  background: none;
 }
 
 .sidebar__brand-text {
@@ -211,13 +214,15 @@
   transition: color 0.15s ease;
 }
 
+/* Colour alone marks hover/active — no background film. Same reasoning as
+   the brand button just above: this sits on the sidebar's off-white, where a
+   translucent accent wash comes out dull rather than crisp. */
 .sidebar__nav-item:hover {
-  background: var(--accent-bg);
+  color: var(--accent);
 }
 
 .sidebar__nav-item.is-active {
   color: var(--accent);
-  background: var(--accent-bg);
 }
 
 .sidebar__nav-item.is-active svg,
@@ -263,7 +268,7 @@
   flex-shrink: 0;
   /* Negative inline margins cancel .app's padding so the rule runs edge to
      edge like a real toolbar, instead of floating inset from the content. */
-  margin: 0 calc(var(--app-padding-x) * -1) 28px;
+  margin: 0 calc(var(--app-padding-x) * -1) 20px;
   padding: 0 var(--app-padding-x) 9px;
   border-bottom: 1px solid var(--border);
 }

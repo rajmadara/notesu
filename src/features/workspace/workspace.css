@@ -488,21 +488,21 @@
 .task-page {
   display: flex;
   flex-direction: column;
-  gap: 34px;
+  gap: 24px;
   max-width: 640px;
 }
 
 .task-page__section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .task-page__section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -555,7 +555,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 9px 4px;
+  padding: 7px 4px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -625,9 +625,11 @@
   transform: rotate(180deg);
 }
 
+/* A done task is dimmed, not struck through — the wording still matters, and
+   the ticked box already says it's done. Same treatment as a checklist. */
 .task-row.is-done .task-row__title {
   color: var(--text);
-  text-decoration: line-through;
+  opacity: 0.6;
 }
 
 .task-row__context {
@@ -674,7 +676,7 @@
     'name meta';
   width: 100%;
   gap: 1px 12px;
-  padding: 11px 10px;
+  padding: 8px 10px;
   margin: 0 -10px;
   border: none;
   border-radius: 10px;
@@ -1297,7 +1299,7 @@
 
 .read__check.is-done .read__check-title {
   color: var(--text);
-  text-decoration: line-through;
+  opacity: 0.6;
 }
 
 .read__day {
