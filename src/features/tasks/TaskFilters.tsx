@@ -1,89 +1,209 @@
-import { Users } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Calendar, ChevronDown, Users } from 'lucide-react'
 import type { Item, Task } from '../../lib/types'
-import { tagsOf, type Filters } from '../../lib/taskFilters'
+import { tagsOf } from '../../lib/taskFilters'
+import { todayISO } from '../../lib/date'
+
+/** Closes an open dropdown on an outside click or Escape. */
+function useDismiss(open: boolean, onDismiss: () => void) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) onDismiss()
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onDismiss()
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, onDismiss])
+  return ref
+}
 
 interface Props {
-  /** The unfiltered tasks the bar is describing — the options come from these. */
+  /** Everything due by the chosen scope, before the item/tag checkboxes narrow
+   *  it further — so an option's checkbox never disappears just because it's
+   *  unchecked. */
   tasks: Task[]
   items: Item[]
-  filters: Filters
-  onChange: (filters: Filters) => void
+  hiddenItemIds: number[]
+  onToggleItem: (itemId: number) => void
+  selectedTags: string[]
+  onToggleTag: (tag: string) => void
+  /** 'today' | 'tomorrow' | an ISO date. */
+  scope: string
+  scopeLabel: string
+  onChangeScope: (scope: string) => void
 }
 
 /**
- * Item chips and a tag dropdown over a task list. The options are derived from
- * the tasks in front of the user rather than from everything that exists, so
- * the bar never offers a choice that would empty the list.
+ * The Today row's own controls: which day to look at, which items to include,
+ * which tags to include — three dropdowns in place of a heading, so there's
+ * no separate filter bar taking its own line. Items and tags are checkboxes
+ * (several at once), the day is one choice.
  */
-export function TaskFilters({ tasks, items, filters, onChange }: Props) {
-  // Items are ordered by how much is outstanding, so the busy ones lead.
+export function TaskFilters({
+  tasks,
+  items,
+  hiddenItemIds,
+  onToggleItem,
+  selectedTags,
+  onToggleTag,
+  scope,
+  scopeLabel,
+  onChangeScope,
+}: Props) {
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [itemsOpen, setItemsOpen] = useState(false)
+  const [tagsOpen, setTagsOpen] = useState(false)
+  const scopeRef = useDismiss(scopeOpen, () => setScopeOpen(false))
+  const itemsRef = useDismiss(itemsOpen, () => setItemsOpen(false))
+  const tagsRef = useDismiss(tagsOpen, () => setTagsOpen(false))
+
   const counts = new Map<number, number>()
   for (const task of tasks) {
     if (task.item_id !== null) counts.set(task.item_id, (counts.get(task.item_id) ?? 0) + 1)
   }
+  // Busiest first — and a hidden item stays listed (with a 0 count) even once
+  // none of its tasks are showing, so it's never impossible to bring back.
   const present = items
     .filter((item) => counts.has(item.id))
     .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) || a.name.localeCompare(b.name))
+  const alsoHidden = items.filter((item) => hiddenItemIds.includes(item.id) && !counts.has(item.id))
+  const itemOptions = [...present, ...alsoHidden]
 
   const tags = [...new Set(tasks.flatMap(tagsOf))].sort((a, b) => a.localeCompare(b))
 
-  // An item filter that no longer matches anything would strand the user on an
-  // empty list with no obvious way back, so keep the chip visible in that case.
-  const activeItem = filters.item !== 'all' ? items.find((i) => i.id === filters.item) : undefined
-  const chips = activeItem && !present.some((i) => i.id === activeItem.id)
-    ? [activeItem, ...present]
-    : present
-
-  if (chips.length < 2 && tags.length === 0) return null
-
-  // A shared item's tasks are someone else's, so its chip says whose.
+  // A shared item's tasks are someone else's, so its row says whose.
   const ownerOf = (itemId: number) =>
     tasks.find((t) => t.item_id === itemId && t.owner_name)?.owner_name
 
   return (
-    <div className="task-filters">
-      <div className="task-filters__chips">
+    <div className="task-page__controls">
+      <div className="menu-anchor" ref={scopeRef}>
         <button
           type="button"
-          className={`filter-chip${filters.item === 'all' ? ' is-active' : ''}`}
-          onClick={() => onChange({ ...filters, item: 'all' })}
+          className="section-title section-title--btn"
+          onClick={() => setScopeOpen((v) => !v)}
+          aria-expanded={scopeOpen}
         >
-          All items
+          {scopeLabel}
+          <ChevronDown size={14} className={scopeOpen ? 'is-open' : undefined} />
         </button>
-        {chips.map((item) => {
-          const owner = ownerOf(item.id)
-          return (
+        {scopeOpen && (
+          <div className="menu menu--left">
             <button
-              key={item.id}
               type="button"
-              className={`filter-chip${filters.item === item.id ? ' is-active' : ''}`}
-              onClick={() =>
-                onChange({ ...filters, item: filters.item === item.id ? 'all' : item.id })
-              }
-              title={owner ? `Shared with you by ${owner}` : undefined}
+              className={`menu__item${scope === 'today' ? ' is-selected' : ''}`}
+              onClick={() => {
+                onChangeScope('today')
+                setScopeOpen(false)
+              }}
             >
-              {owner && <Users size={11} className="filter-chip__shared" />}
-              {item.name}
-              <span className="filter-chip__count">{counts.get(item.id) ?? 0}</span>
+              Today
             </button>
-          )
-        })}
+            <button
+              type="button"
+              className={`menu__item${scope === 'tomorrow' ? ' is-selected' : ''}`}
+              onClick={() => {
+                onChangeScope('tomorrow')
+                setScopeOpen(false)
+              }}
+            >
+              Tomorrow
+            </button>
+            <label className="menu__item menu__item--date">
+              <Calendar size={14} />
+              Pick a date
+              <input
+                type="date"
+                className="menu__date-input"
+                value={scope !== 'today' && scope !== 'tomorrow' ? scope : todayISO()}
+                onChange={(e) => {
+                  if (!e.target.value) return
+                  onChangeScope(e.target.value)
+                  setScopeOpen(false)
+                }}
+              />
+            </label>
+          </div>
+        )}
       </div>
 
+      {itemOptions.length > 0 && (
+        <div className="menu-anchor" ref={itemsRef}>
+          <button
+            type="button"
+            className={`filter-trigger${hiddenItemIds.length > 0 ? ' is-active' : ''}`}
+            onClick={() => setItemsOpen((v) => !v)}
+            aria-expanded={itemsOpen}
+          >
+            Items
+            {hiddenItemIds.length > 0 && (
+              <span className="filter-trigger__count">{hiddenItemIds.length} hidden</span>
+            )}
+            <ChevronDown size={12} />
+          </button>
+          {itemsOpen && (
+            <div className="menu menu--left">
+              {itemOptions.map((item) => {
+                const owner = ownerOf(item.id)
+                return (
+                  <label key={item.id} className="menu__item menu__item--checkbox">
+                    <input
+                      type="checkbox"
+                      checked={!hiddenItemIds.includes(item.id)}
+                      onChange={() => onToggleItem(item.id)}
+                    />
+                    {owner && (
+                      <span className="filter-chip__shared" title={`Shared with you by ${owner}`}>
+                        <Users size={11} />
+                      </span>
+                    )}
+                    <span className="menu__item-label">{item.name}</span>
+                    <span className="menu__item-count">{counts.get(item.id) ?? 0}</span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {tags.length > 0 && (
-        <select
-          className="task-filters__tag"
-          value={filters.tag}
-          onChange={(e) => onChange({ ...filters, tag: e.target.value })}
-          aria-label="Filter by tag"
-        >
-          <option value="all">All tags</option>
-          {tags.map((tag) => (
-            <option key={tag} value={tag}>
-              {tag}
-            </option>
-          ))}
-        </select>
+        <div className="menu-anchor" ref={tagsRef}>
+          <button
+            type="button"
+            className={`filter-trigger${selectedTags.length > 0 ? ' is-active' : ''}`}
+            onClick={() => setTagsOpen((v) => !v)}
+            aria-expanded={tagsOpen}
+          >
+            Tags
+            {selectedTags.length > 0 && (
+              <span className="filter-trigger__count">{selectedTags.length}</span>
+            )}
+            <ChevronDown size={12} />
+          </button>
+          {tagsOpen && (
+            <div className="menu menu--left">
+              {tags.map((tag) => (
+                <label key={tag} className="menu__item menu__item--checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedTags.includes(tag)}
+                    onChange={() => onToggleTag(tag)}
+                  />
+                  <span className="menu__item-label">{tag}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

@@ -236,6 +236,14 @@
   min-width: 100%;
 }
 
+/* For a trigger near the left edge of its row — .menu's right-aligned default
+   assumes the trigger sits toward the right, and opens mostly off-screen when
+   it doesn't. */
+.menu--left {
+  right: auto;
+  left: 0;
+}
+
 @keyframes pop {
   from {
     opacity: 0;

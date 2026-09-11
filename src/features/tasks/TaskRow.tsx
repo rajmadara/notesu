@@ -14,8 +14,9 @@ interface Props {
   /** Name of the item this belongs to. Omitted on an item's own page, where
    *  every task obviously belongs to it. */
   itemName?: string
-  /** Hides today's chip on the main list, where everything shown is "today". */
-  hideTodayChip?: boolean
+  /** An ISO date whose due-chip is redundant here — the row is already inside
+   *  that day's section, so repeating it on every line adds nothing. */
+  hideChipForDate?: string
   readOnly?: boolean
   onToggle: (task: Task) => void
   onOpen: (task: Task) => void
@@ -30,14 +31,14 @@ interface Props {
 export function TaskRow({
   task,
   itemName,
-  hideTodayChip = false,
+  hideChipForDate,
   readOnly = false,
   onToggle,
   onOpen,
   onOpenItem,
 }: Props) {
   const tone = task.due_date ? dueTone(task.due_date) : null
-  const showDue = task.due_date && !(hideTodayChip && tone === 'today')
+  const showDue = task.due_date && task.due_date !== hideChipForDate
 
   return (
     <li className={`task-row${task.status === 'done' ? ' is-done' : ''}`}>

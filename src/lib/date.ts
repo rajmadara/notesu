@@ -14,6 +14,14 @@ export function todayISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/** 'YYYY-MM-DD' shifted by `days` (negative goes backward). */
+export function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /** 'YYYY-MM-DD' -> 'Jan 27' (adds the year when it isn't this year). */
 export function formatShortDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`)

@@ -1038,39 +1038,52 @@
   white-space: nowrap;
 }
 
-/* ---------- Task filters (item chips + tag dropdown) ---------- */
+/* ---------- Today's controls: day / items / tags, inline with the title ---------- */
 
-.task-filters {
+.task-page__controls {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-/* The chips scroll rather than wrapping, so the bar stays one line high
-   however many items there are. */
-.task-filters__chips {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
+  gap: 8px;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 1px;
+  flex-wrap: wrap;
 }
 
-.task-filters__chips::-webkit-scrollbar {
-  display: none;
+/* The day picker doubles as the section heading — same look, just clickable. */
+.section-title--btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  cursor: pointer;
 }
 
-.filter-chip {
+.section-title--btn:hover {
+  color: var(--accent);
+}
+
+.section-title--btn svg {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.section-title--btn svg.is-open {
+  transform: rotate(180deg);
+}
+
+/* Items / Tags triggers — a smaller, secondary pill beside the day picker. */
+.filter-trigger {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   flex: none;
-  height: 27px;
-  padding: 0 10px;
+  height: 26px;
+  padding: 0 9px;
   border: 1px solid var(--border);
   border-radius: 999px;
   font: inherit;
@@ -1082,49 +1095,75 @@
   transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.filter-chip:hover {
+.filter-trigger:hover {
   border-color: var(--accent-border);
 }
 
-.filter-chip.is-active {
+.filter-trigger.is-active {
   border-color: var(--accent-border);
   background: var(--accent-bg);
   color: var(--accent);
   font-weight: 500;
 }
 
+.filter-trigger__count {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
 .filter-chip__shared {
+  display: inline-flex;
   flex: none;
   opacity: 0.75;
 }
 
-.filter-chip__count {
-  font-size: 11px;
-  opacity: 0.6;
-}
-
-.task-filters__tag {
-  flex: none;
-  height: 27px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--text);
-  background: var(--bg);
+/* Checkbox rows inside the Items / Tags dropdowns — .menu__item styled as a
+   label instead of a button. */
+.menu__item--checkbox {
   cursor: pointer;
-  outline: none;
 }
 
-.task-filters__tag:focus {
-  border-color: var(--accent-border);
+.menu__item--checkbox input {
+  flex: none;
+  accent-color: var(--accent);
 }
 
-@media (max-width: 600px) {
-  .task-filters {
-    gap: 8px;
-  }
+.menu__item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu__item-count {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.menu__item.is-selected {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* The "pick a date" row in the day menu: label text with the native date
+   input layered transparently on top, so the whole row is the click target. */
+.menu__item--date {
+  position: relative;
+  cursor: pointer;
+}
+
+.menu__date-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* ---------- Tag picker (task detail panel) ---------- */

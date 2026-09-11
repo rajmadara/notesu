@@ -1,14 +1,15 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
 import type { Item, Space, Task, TaskPriority } from '../../lib/types'
-import { dueLabel, dueTone, formatShortDate, greeting, todayISO } from '../../lib/date'
+import { addDaysISO, dueLabel, dueTone, formatShortDate, greeting, todayISO } from '../../lib/date'
 import { HeaderTitle } from '../shell/HeaderSlot'
 import { EntityIcon } from '../workspace/EntityIcon'
 import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 import { AddTaskDialog } from '../tasks/AddTaskDialog'
 import { TaskRow } from '../tasks/TaskRow'
 import { TaskFilters } from '../tasks/TaskFilters'
-import { NO_FILTERS, isFiltering, matchesFilters, type Filters } from '../../lib/taskFilters'
+import { matchesTags } from '../../lib/taskFilters'
+import { getHiddenItems, setHiddenItems } from '../../lib/hiddenItems'
 
 // ~390kB of editor, only once someone opens a task.
 const TaskDetailPanel = lazy(() =>
@@ -60,30 +61,58 @@ export function Home({
   const [pending, setPending] = useState<string | null>(null)
   const [showLater, setShowLater] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [filters, setFilters] = useState<Filters>(NO_FILTERS)
+  // 'today' | 'tomorrow' | an ISO date — which day the list below is showing.
+  // Deliberately not persisted: landing back on a future date by surprise
+  // would be worse than just defaulting to today every time.
+  const [scope, setScope] = useState('today')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  // Items the user unchecked — a display preference, kept in this browser
+  // rather than the database (see lib/hiddenItems).
+  const [hiddenItemIds, setHiddenItemIds] = useState<number[]>(getHiddenItems)
+
+  useEffect(() => {
+    setHiddenItems(hiddenItemIds)
+  }, [hiddenItemIds])
+
+  function toggleItemHidden(itemId: number) {
+    setHiddenItemIds((ids) =>
+      ids.includes(itemId) ? ids.filter((id) => id !== itemId) : [...ids, itemId],
+    )
+  }
+
+  function toggleTag(tag: string) {
+    setSelectedTags((tags) => (tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag]))
+  }
 
   const searching = searchResults !== null
   const today = todayISO()
+  const scopeISO = scope === 'today' ? today : scope === 'tomorrow' ? addDaysISO(today, 1) : scope
+  const scopeLabel = scope === 'today' ? 'Today' : scope === 'tomorrow' ? 'Tomorrow' : formatShortDate(scope)
 
   // App hands over only what belongs on the list; the archive is its own view.
   const active = tasks
+  const hiddenSet = new Set(hiddenItemIds)
   const byUrgency = (a: Task, b: Task) => {
     if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1
     return (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || b.created_at - a.created_at
   }
-  // "Today" is the actionable set: anything due by today, plus everything with
-  // no date at all. Dated-for-later waits behind the toggle.
-  const todays = active.filter((t) => !t.due_date || t.due_date <= today).sort(byUrgency)
-  const later = active
-    .filter((t) => t.due_date && t.due_date > today)
-    .filter((t) => matchesFilters(t, filters))
+  // Everything due by the chosen day, plus anything undated — before the item
+  // and tag checkboxes narrow it. The dropdowns build their option lists from
+  // this same set, so an option never disappears just because it's unchecked.
+  const scopedActive = active.filter((t) => !t.due_date || t.due_date <= scopeISO)
+  const todays = scopedActive
+    .filter((t) => t.item_id === null || !hiddenSet.has(t.item_id))
+    .filter((t) => matchesTags(t, selectedTags))
     .sort(byUrgency)
-  const doneCount = todays.filter((t) => matchesFilters(t, filters) && t.status === 'done').length
+  const later = active
+    .filter((t) => t.due_date && t.due_date > scopeISO)
+    .filter((t) => t.item_id === null || !hiddenSet.has(t.item_id))
+    .filter((t) => matchesTags(t, selectedTags))
+    .sort(byUrgency)
+  const doneCount = todays.filter((t) => t.status === 'done').length
 
-  // The bar's options come from the unfiltered set, so choosing one filter
-  // never hides the others.
-  const inScope = searching ? searchResults : todays
-  const listed = inScope.filter((t) => matchesFilters(t, filters)).sort(byUrgency)
+  const listed = searching ? [...searchResults].sort(byUrgency) : todays
+  const isFiltering = hiddenItemIds.length > 0 || selectedTags.length > 0
 
   const remainingByItem = new Map<number, number>()
   for (const t of active) {
@@ -116,7 +145,7 @@ export function Home({
       key={task.id}
       task={task}
       itemName={task.item_id !== null ? allItems.find((i) => i.id === task.item_id)?.name : undefined}
-      hideTodayChip={!searching}
+      hideChipForDate={searching ? undefined : scopeISO}
       onToggle={onToggleTask}
       onOpen={(t) => setSelectedId(t.id)}
       onOpenItem={onOpenItem}
@@ -136,20 +165,26 @@ export function Home({
 
       <section className="task-page__section">
         <div className="task-page__section-head">
-          <h2 className="section-title">{searching ? 'Results' : 'Today'}</h2>
+          {searching ? (
+            <h2 className="section-title">Results</h2>
+          ) : (
+            <TaskFilters
+              tasks={scopedActive}
+              items={allItems}
+              hiddenItemIds={hiddenItemIds}
+              onToggleItem={toggleItemHidden}
+              selectedTags={selectedTags}
+              onToggleTag={toggleTag}
+              scope={scope}
+              scopeLabel={scopeLabel}
+              onChangeScope={setScope}
+            />
+          )}
           <span className="task-page__stat">
-            {searching
-              ? `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}`
-              : `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}${doneCount > 0 ? ` · ${doneCount} done` : ''}`}
+            {listed.length} {listed.length === 1 ? 'task' : 'tasks'}
+            {!searching && doneCount > 0 ? ` · ${doneCount} done` : ''}
           </span>
         </div>
-
-        <TaskFilters
-          tasks={inScope}
-          items={allItems}
-          filters={filters}
-          onChange={setFilters}
-        />
 
         {!searching && (
           <form className="task-add" onSubmit={startAdd}>
@@ -165,11 +200,13 @@ export function Home({
 
         {listed.length === 0 ? (
           <p className="empty-state">
-            {isFiltering(filters)
-              ? 'Nothing matches these filters.'
-              : searching
-                ? 'No matches for your search.'
-                : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
+            {searching
+              ? 'No matches for your search.'
+              : isFiltering
+                ? 'Nothing matches these filters.'
+                : scope === 'today'
+                  ? 'Nothing on your plate. Add something above, or enjoy the quiet.'
+                  : `Nothing due for ${scopeLabel} yet.`}
           </p>
         ) : (
           <ul className="task-rows">{listed.map(row)}</ul>
