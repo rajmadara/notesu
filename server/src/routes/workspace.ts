@@ -154,6 +154,14 @@ export function createWorkspaceRouter(store: TaskStore): Router {
     }),
   )
 
+  router.put(
+    '/spaces/:id/archived',
+    asyncHandler(async (req, res) => {
+      await store.setSpaceArchived(req.userId, id(req.params.id), Boolean(req.body?.archived))
+      res.status(204).end()
+    }),
+  )
+
   router.delete(
     '/spaces/:id',
     asyncHandler(async (req, res) => {
@@ -250,6 +258,14 @@ export function createWorkspaceRouter(store: TaskStore): Router {
         ...(typeof body.location === 'string' ? { location: str(body.location, 300) } : {}),
         ...(typeof body.description === 'string' ? { description: str(body.description, 5000) } : {}),
       })
+      res.status(204).end()
+    }),
+  )
+
+  router.put(
+    '/items/:id/archived',
+    asyncHandler(async (req, res) => {
+      await store.setItemArchived(req.userId, id(req.params.id), Boolean(req.body?.archived))
       res.status(204).end()
     }),
   )

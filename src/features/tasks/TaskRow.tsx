@@ -1,6 +1,7 @@
-import { Check, Users } from 'lucide-react'
+import { Archive, Check, Users } from 'lucide-react'
 import type { Task } from '../../lib/types'
 import { dueLabel, dueTone } from '../../lib/date'
+import { archivingSoon, daysUntilArchived } from '../../lib/archive'
 
 const PRIORITY_LABEL: Record<string, string> = {
   urgent_important: 'Urgent & important',
@@ -81,6 +82,16 @@ export function TaskRow({
       )}
 
       {showDue && <span className={`due-chip is-${tone}`}>{dueLabel(task.due_date!)}</span>}
+
+      {archivingSoon(task) && (
+        <span
+          className="task-row__sweep"
+          title="Finished tasks are archived a week after you tick them"
+        >
+          <Archive size={11} />
+          {daysUntilArchived(task) === 0 ? 'Archiving today' : 'Archiving tomorrow'}
+        </span>
+      )}
     </li>
   )
 }

@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
-import { BookOpen, Ellipsis, FileText, ListChecks, Pencil, Plus, Route, Share2, Trash2, Users, X } from 'lucide-react'
-import type { ItemDetail, ItemReadView, Page, PageKind, Task } from '../../lib/types'
+import {
+  Archive,
+  ArchiveRestore,
+  BookOpen,
+  Ellipsis,
+  FileText,
+  ListChecks,
+  Pencil,
+  Plus,
+  Route,
+  Share2,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react'
+import type { Item, ItemDetail, ItemReadView, Page, PageKind, Task } from '../../lib/types'
 import {
   createPage,
   deleteItem,
@@ -43,6 +57,7 @@ interface Props {
   onItemChanged: () => void
   onDeleted: () => void
   onTasksChanged: () => void
+  onArchiveItem: (item: Item) => Promise<void>
 }
 
 /**
@@ -57,6 +72,7 @@ export function ItemWorkspace({
   onItemChanged,
   onDeleted,
   onTasksChanged,
+  onArchiveItem,
 }: Props) {
   const [detail, setDetail] = useState<ItemDetail | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -230,6 +246,24 @@ export function ItemWorkspace({
                 </button>
                 {menuOpen && (
                   <div className="menu" onMouseLeave={() => setMenuOpen(false)}>
+                    <button
+                      type="button"
+                      className="menu__item"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        onArchiveItem(item)
+                      }}
+                    >
+                      {item.archived ? (
+                        <>
+                          <ArchiveRestore size={14} /> Restore item
+                        </>
+                      ) : (
+                        <>
+                          <Archive size={14} /> Archive item
+                        </>
+                      )}
+                    </button>
                     <button
                       type="button"
                       className="menu__item menu__item--danger"

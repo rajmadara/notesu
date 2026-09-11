@@ -1,7 +1,6 @@
 import { Suspense, lazy, useState } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
 import type { Item, Space, Task, TaskPriority } from '../../lib/types'
-import type { TaskView } from '../../App'
 import { dueLabel, dueTone, formatShortDate, greeting, todayISO } from '../../lib/date'
 import { HeaderTitle } from '../shell/HeaderSlot'
 import { EntityIcon } from '../workspace/EntityIcon'
@@ -23,7 +22,6 @@ interface Props {
   /** Items shared with the user — needed to name the item a shared task sits on. */
   sharedItems: Item[]
   spaces: Space[]
-  view: TaskView
   searchResults: Task[] | null
   onAddTask: (title: string, itemId: number | null, dueDate: string | null) => Promise<void>
   onToggleTask: (task: Task) => Promise<void>
@@ -47,7 +45,6 @@ export function Home({
   items,
   sharedItems,
   spaces,
-  view,
   searchResults,
   onAddTask,
   onToggleTask,
@@ -66,10 +63,10 @@ export function Home({
   const [filters, setFilters] = useState<Filters>(NO_FILTERS)
 
   const searching = searchResults !== null
-  const archived = view === 'archived'
   const today = todayISO()
 
-  const active = tasks.filter((t) => !t.archived)
+  // App hands over only what belongs on the list; the archive is its own view.
+  const active = tasks
   const byUrgency = (a: Task, b: Task) => {
     if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1
     return (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || b.created_at - a.created_at
@@ -85,11 +82,7 @@ export function Home({
 
   // The bar's options come from the unfiltered set, so choosing one filter
   // never hides the others.
-  const inScope = searching
-    ? searchResults
-    : archived
-      ? tasks.filter((t) => t.archived)
-      : todays
+  const inScope = searching ? searchResults : todays
   const listed = inScope.filter((t) => matchesFilters(t, filters)).sort(byUrgency)
 
   const remainingByItem = new Map<number, number>()
@@ -123,7 +116,7 @@ export function Home({
       key={task.id}
       task={task}
       itemName={task.item_id !== null ? allItems.find((i) => i.id === task.item_id)?.name : undefined}
-      hideTodayChip={!archived && !searching}
+      hideTodayChip={!searching}
       onToggle={onToggleTask}
       onOpen={(t) => setSelectedId(t.id)}
       onOpenItem={onOpenItem}
@@ -135,17 +128,17 @@ export function Home({
       <HeaderTitle>
         <span className="header-title-group">
           <h1 className="header-title">
-            {searching ? 'Search' : archived ? 'Archived' : `${greeting()}${name ? `, ${name}` : ''}`}
+            {searching ? 'Search' : `${greeting()}${name ? `, ${name}` : ''}`}
           </h1>
-          {!searching && !archived && <span className="header-sub">{formatShortDate(today)}</span>}
+          {!searching && <span className="header-sub">{formatShortDate(today)}</span>}
         </span>
       </HeaderTitle>
 
       <section className="task-page__section">
         <div className="task-page__section-head">
-          <h2 className="section-title">{searching ? 'Results' : archived ? 'Archived' : 'Today'}</h2>
+          <h2 className="section-title">{searching ? 'Results' : 'Today'}</h2>
           <span className="task-page__stat">
-            {searching || archived
+            {searching
               ? `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}`
               : `${listed.length} ${listed.length === 1 ? 'task' : 'tasks'}${doneCount > 0 ? ` · ${doneCount} done` : ''}`}
           </span>
@@ -158,7 +151,7 @@ export function Home({
           onChange={setFilters}
         />
 
-        {!searching && !archived && (
+        {!searching && (
           <form className="task-add" onSubmit={startAdd}>
             <Plus size={16} className="task-add__icon" />
             <input
@@ -176,15 +169,13 @@ export function Home({
               ? 'Nothing matches these filters.'
               : searching
                 ? 'No matches for your search.'
-                : archived
-                  ? 'Nothing archived.'
-                  : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
+                : 'Nothing on your plate. Add something above, or enjoy the quiet.'}
           </p>
         ) : (
           <ul className="task-rows">{listed.map(row)}</ul>
         )}
 
-        {!searching && !archived && later.length > 0 && (
+        {!searching && later.length > 0 && (
           <>
             <button
               type="button"
@@ -200,7 +191,7 @@ export function Home({
         )}
       </section>
 
-      {!searching && !archived && upcoming.length > 0 && (
+      {!searching && upcoming.length > 0 && (
         <section className="task-page__section">
           <h2 className="section-title">Upcoming</h2>
           <ul className="home__upcoming">

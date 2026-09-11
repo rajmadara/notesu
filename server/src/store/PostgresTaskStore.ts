@@ -56,7 +56,14 @@ const MIGRATIONS = [
   '0010_space_shares.sql',
   '0011_tasks_page_kind.sql',
   '0012_page_columns.sql',
+  '0013_archive_cascade.sql',
 ]
+
+/**
+ * How long a finished task stays on the list before it's archived. The client
+ * warns on the last day, so this is also what that countdown is measured from.
+ */
+const ARCHIVE_AFTER_DAYS = 7
 
 /** Most-permissive wins when someone holds both a space and an item share. */
 function bestPermission(...grants: (string | null)[]): 'edit' | 'view' | null {
@@ -113,7 +120,7 @@ const OWNER_NAME_SQL = `COALESCE(u.raw_user_meta_data->>'full_name', u.email, 'S
  */
 const VISIBLE_TASKS_SQL = `
   SELECT t.id, t.title, t.status, t.seconds, t.running_since, t.date, t.created_at,
-         t.priority, t.tags, t.category, t.archived, t.due_date, t.item_id, t.page_id,
+         t.priority, t.tags, t.category, t.archived, t.done_at, t.due_date, t.item_id, t.page_id,
          CASE WHEN t.user_id = $1 THEN '' ELSE ${OWNER_NAME_SQL} END AS owner_name
     FROM tasks t
     JOIN auth.users u ON u.id = t.user_id
@@ -209,8 +216,42 @@ export class PostgresTaskStore implements TaskStore {
     await this.writeTaskField(userId, id, 'title', title)
   }
 
+  /**
+   * Stamps done_at alongside the status, so "finished a week ago" is a fact
+   * about the task rather than a guess. Re-opening a task clears it, which also
+   * takes it out of the sweep.
+   */
   async setTaskStatus(userId: string, id: number, status: TaskStatus): Promise<void> {
-    await this.writeTaskField(userId, id, 'status', status)
+    this.requireWrite(await this.taskAccess(userId, id))
+    await this.pool.query(
+      `UPDATE tasks SET status = $1,
+              done_at = CASE WHEN $1 = 'done' THEN COALESCE(done_at, $2) ELSE NULL END
+        WHERE id = $3`,
+      [status, Math.floor(Date.now() / 1000), id],
+    )
+  }
+
+  /**
+   * Archives the caller's own tasks finished more than a week ago. Tasks inside
+   * an already-archived item or space are skipped — they're hidden by
+   * inheritance, so flipping their own flag would change what unarchiving
+   * restores.
+   */
+  async sweepArchive(userId: string): Promise<number> {
+    const cutoff = Math.floor(Date.now() / 1000) - ARCHIVE_AFTER_DAYS * 86_400
+    const { rowCount } = await this.pool.query(
+      `UPDATE tasks t SET archived = true
+        WHERE t.user_id = $1
+          AND t.status = 'done'
+          AND t.archived = false
+          AND t.done_at IS NOT NULL
+          AND t.done_at <= $2
+          AND NOT EXISTS (
+                SELECT 1 FROM items i JOIN spaces sp ON sp.id = i.space_id
+                 WHERE i.id = t.item_id AND (i.archived OR sp.archived))`,
+      [userId, cutoff],
+    )
+    return rowCount ?? 0
   }
 
   async setTaskPriority(userId: string, id: number, priority: TaskPriority): Promise<void> {
@@ -462,6 +503,11 @@ export class PostgresTaskStore implements TaskStore {
     )
   }
 
+  async setSpaceArchived(userId: string, id: number, archived: boolean): Promise<void> {
+    this.requireOwner(await this.spaceAccess(userId, id))
+    await this.pool.query('UPDATE spaces SET archived = $1 WHERE id = $2', [archived, id])
+  }
+
   async deleteSpace(userId: string, id: number): Promise<void> {
     await this.pool.query('DELETE FROM spaces WHERE id = $1 AND user_id = $2', [id, userId])
   }
@@ -556,6 +602,11 @@ export class PostgresTaskStore implements TaskStore {
     if (sets.length === 0) return
     values.push(id)
     await this.pool.query(`UPDATE items SET ${sets.join(', ')} WHERE id = $${values.length}`, values)
+  }
+
+  async setItemArchived(userId: string, id: number, archived: boolean): Promise<void> {
+    this.requireWrite(await this.itemAccess(userId, id))
+    await this.pool.query('UPDATE items SET archived = $1 WHERE id = $2', [archived, id])
   }
 
   async deleteItem(userId: string, id: number): Promise<void> {

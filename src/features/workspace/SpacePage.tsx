@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, Ellipsis, Plus, Share2, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Calendar, Ellipsis, Plus, Share2, Trash2 } from 'lucide-react'
 import type { Item, Space, Task } from '../../lib/types'
 import { dueLabel, dueTone } from '../../lib/date'
 import { HeaderTitle } from '../shell/HeaderSlot'
@@ -18,6 +18,7 @@ interface Props {
   onCreateItem: (name: string) => Promise<void>
   onUpdateSpace: (name: string, icon: string) => Promise<void>
   onDeleteSpace: () => Promise<void>
+  onArchiveSpace: () => Promise<void>
 }
 
 /** A space's front page: its items, and where new ones are made. */
@@ -30,6 +31,7 @@ export function SpacePage({
   onCreateItem,
   onUpdateSpace,
   onDeleteSpace,
+  onArchiveSpace,
 }: Props) {
   const isOwner = permission === 'owner'
   const canEdit = permission !== 'view'
@@ -114,6 +116,24 @@ export function SpacePage({
           </button>
           {menuOpen && isOwner && (
             <div className="menu" onMouseLeave={() => setMenuOpen(false)}>
+              <button
+                type="button"
+                className="menu__item"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onArchiveSpace()
+                }}
+              >
+                {space.archived ? (
+                  <>
+                    <ArchiveRestore size={14} /> Restore space
+                  </>
+                ) : (
+                  <>
+                    <Archive size={14} /> Archive space
+                  </>
+                )}
+              </button>
               <button
                 type="button"
                 className="menu__item menu__item--danger"

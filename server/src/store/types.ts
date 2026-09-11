@@ -17,6 +17,8 @@ export interface Task {
   tags: string
   category: string
   archived: boolean
+  /** When it was completed, in epoch seconds. Drives the weekly sweep. */
+  done_at: number | null
   user_id: string
   /** Set on the main list for a task owned by someone else; '' for your own. */
   owner_name?: string
@@ -41,6 +43,8 @@ export interface Space {
   user_id: string
   name: string
   icon: string
+  /** Archived spaces leave the sidebar; everything inside is hidden with them. */
+  archived: boolean
   position: number
   created_at: number
 }
@@ -54,6 +58,8 @@ export interface Item {
   date: string | null
   location: string
   description: string
+  /** Archived items leave the sidebar; their tasks are hidden with them. */
+  archived: boolean
   position: number
   created_at: number
 }
@@ -262,6 +268,11 @@ export interface TaskStore {
   setTaskTags(userId: string, id: number, tags: string): Promise<void>
   setTaskCategory(userId: string, id: number, category: string): Promise<void>
   setTaskArchived(userId: string, id: number, archived: boolean): Promise<void>
+  /**
+   * Archives the caller's tasks finished more than a week ago. Returns how many
+   * moved, so the route can say. Cheap enough to run on every load.
+   */
+  sweepArchive(userId: string): Promise<number>
   setTaskDueDate(userId: string, id: number, dueDate: string | null): Promise<void>
   startTaskTimer(userId: string, id: number): Promise<number>
   stopTaskTimer(userId: string, id: number): Promise<void>
@@ -279,6 +290,7 @@ export interface TaskStore {
   getSharedSpaces(userId: string): Promise<SharedSpace[]>
   createSpace(userId: string, name: string, icon: string): Promise<Space>
   updateSpace(userId: string, id: number, name: string, icon: string): Promise<void>
+  setSpaceArchived(userId: string, id: number, archived: boolean): Promise<void>
   deleteSpace(userId: string, id: number): Promise<void>
   getSpaceShares(userId: string, spaceId: number): Promise<SpaceShare[]>
   shareSpace(userId: string, spaceId: number, email: string, permission: SharePermission): Promise<SpaceShare>
@@ -291,6 +303,7 @@ export interface TaskStore {
   getItemDetail(userId: string, itemId: number): Promise<ItemDetail | null>
   getItemReadView(userId: string, itemId: number): Promise<ItemReadView | null>
   updateItem(userId: string, id: number, patch: ItemPatch): Promise<void>
+  setItemArchived(userId: string, id: number, archived: boolean): Promise<void>
   deleteItem(userId: string, id: number): Promise<void>
 
   // --- Pages ---

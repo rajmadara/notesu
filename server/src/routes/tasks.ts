@@ -15,6 +15,9 @@ export function createTasksRouter(store: TaskStore): Router {
   router.get(
     '/',
     asyncHandler(async (req, res) => {
+      // Sweep before reading, so the list the client gets is already settled.
+      // Cheap: one indexed UPDATE that usually matches nothing.
+      await store.sweepArchive(req.userId)
       res.json(await store.getAllTasks(req.userId))
     }),
   )

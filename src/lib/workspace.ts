@@ -38,6 +38,8 @@ export const createSpace = (name: string, icon: string) =>
   request<Space>('/spaces', json({ name, icon }))
 export const updateSpace = (id: number, name: string, icon: string) =>
   request<void>(`/spaces/${id}`, put({ name, icon }))
+export const setSpaceArchived = (id: number, archived: boolean) =>
+  request<void>(`/spaces/${id}/archived`, put({ archived }))
 export const deleteSpace = (id: number) => request<void>(`/spaces/${id}`, del)
 
 // --- Items ---
@@ -58,6 +60,8 @@ export interface ItemPatch {
 }
 export const updateItem = (id: number, patch: ItemPatch) =>
   request<void>(`/items/${id}`, put(patch))
+export const setItemArchived = (id: number, archived: boolean) =>
+  request<void>(`/items/${id}/archived`, put({ archived }))
 export const deleteItem = (id: number) => request<void>(`/items/${id}`, del)
 
 // --- Pages ---

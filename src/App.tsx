@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { Archive, Home as HomeIcon, Menu, Plus } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from './lib/theme'
+import { archiveReason, byId } from './lib/archive'
 import type { Item, SharedItem, SharedSpace, Space, Task, TaskPriority } from './lib/types'
 import {
   createTask,
@@ -21,15 +22,19 @@ import {
   createSpace,
   deleteSpace,
   getItems,
+  setItemArchived,
+  setSpaceArchived,
   getSharedItems,
   getSharedSpaces,
   getSpaces,
   updateSpace,
 } from './lib/workspace'
 import { Home } from './features/home/Home'
+import { ArchiveView } from './features/archive/ArchiveView'
 import { ItemWorkspace } from './features/workspace/ItemWorkspace'
 import { SpacePage } from './features/workspace/SpacePage'
 import { Sidebar } from './features/sidebar/Sidebar'
+import { NotesuMark } from './features/sidebar/NotesuMark'
 import { SearchBox } from './features/search/SearchBox'
 import { AccountMenu } from './features/account/AccountMenu'
 import { HeaderSlotContext } from './features/shell/headerSlotContext'
@@ -191,6 +196,22 @@ function App() {
     await refreshTasks()
   }
 
+  async function handleArchiveItem(item: Item) {
+    await setItemArchived(item.id, !item.archived)
+    await refreshWorkspace()
+    if (!item.archived && route.kind === 'item' && route.itemId === item.id) {
+      navigate({ kind: 'home' })
+    }
+  }
+
+  async function handleArchiveSpace(space: Space) {
+    await setSpaceArchived(space.id, !space.archived)
+    await refreshWorkspace()
+    if (!space.archived && route.kind === 'space' && route.spaceId === space.id) {
+      navigate({ kind: 'home' })
+    }
+  }
+
   async function handleArchiveTask(task: Task) {
     await setTaskArchived(task.id, !task.archived)
     await refreshTasks()
@@ -219,6 +240,14 @@ function App() {
     setSearchResults(null)
   }
 
+  // Archiving is inherited, so "is this task live?" is a question about the
+  // task, its item and its space together — asked in one place.
+  const itemsById = byId([...items, ...sharedItems])
+  const spacesById = byId([...spaces, ...sharedSpaces])
+  const liveTasks = tasks.filter((t) => archiveReason(t, itemsById, spacesById) === null)
+  const liveSpaces = spaces.filter((s) => !s.archived)
+  const liveItems = items.filter((i) => !i.archived && !spacesById.get(i.space_id)?.archived)
+
   const meta = (session?.user.user_metadata ?? {}) as { full_name?: string }
   const firstName = (meta.full_name ?? '').split(' ')[0] ?? ''
   const wide = route.kind === 'item'
@@ -240,8 +269,8 @@ function App() {
           onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
           theme={theme}
           onChangeTheme={setTheme}
-          spaces={spaces}
-          items={items}
+          spaces={liveSpaces}
+          items={liveItems}
           sharedSpaces={sharedSpaces}
           sharedItems={sharedItems}
           route={route}
@@ -277,6 +306,9 @@ function App() {
           {session === undefined ? null : session === null ? (
             <div className="welcome">
               <div className="welcome__card">
+                <div className="welcome__mark">
+                  <NotesuMark size={56} strokeWidth={10} />
+                </div>
                 <h1 className="welcome__title">
                   Welcome to Notes<span className="app__logo-accent">u</span>
                 </h1>
@@ -310,6 +342,17 @@ function App() {
                 refreshTasks()
               }}
               onTasksChanged={refreshTasks}
+              onArchiveItem={handleArchiveItem}
+            />
+          ) : route.kind === 'home' && view === 'archived' ? (
+            <ArchiveView
+              tasks={tasks}
+              items={items}
+              spaces={spaces}
+              onUnarchiveTask={handleArchiveTask}
+              onUnarchiveItem={handleArchiveItem}
+              onUnarchiveSpace={handleArchiveSpace}
+              onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}
             />
           ) : route.kind === 'space' ? (
             (() => {
@@ -335,6 +378,7 @@ function App() {
                     await updateSpace(space.id, name, icon)
                     await refreshWorkspace()
                   }}
+                  onArchiveSpace={() => handleArchiveSpace(space)}
                   onDeleteSpace={async () => {
                     await deleteSpace(space.id)
                     navigate({ kind: 'home' })
@@ -349,11 +393,10 @@ function App() {
           ) : (
             <Home
               name={firstName}
-              tasks={tasks}
-              items={items}
+              tasks={liveTasks}
+              items={liveItems}
               sharedItems={sharedItems}
-              spaces={spaces}
-              view={view}
+              spaces={liveSpaces}
               searchResults={searchResults}
               onAddTask={handleAddTask}
               onToggleTask={handleToggleTask}

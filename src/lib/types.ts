@@ -17,6 +17,8 @@ export interface Task {
   tags: string
   category: string
   archived: boolean
+  /** When it was completed, in epoch seconds. Drives the weekly sweep. */
+  done_at: number | null
   /** Who owns it, when that isn't you — set on the main list for shared work. */
   owner_name?: string
   due_date: string | null
@@ -39,6 +41,8 @@ export interface Space {
   id: number
   name: string
   icon: string
+  /** Archived spaces leave the sidebar; everything inside is hidden with them. */
+  archived: boolean
   position: number
   created_at: number
 }
@@ -51,6 +55,8 @@ export interface Item {
   date: string | null
   location: string
   description: string
+  /** Archived items leave the sidebar; their tasks are hidden with them. */
+  archived: boolean
   position: number
   created_at: number
 }
