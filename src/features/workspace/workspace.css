@@ -33,7 +33,7 @@
 }
 
 .section-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-h);
 }
@@ -407,16 +407,21 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1.5px solid var(--border);
+  /* A darker outline than --border — the light one nearly disappeared against
+     the fill right inside it. */
+  border: 1.5px solid var(--text);
   border-radius: 6px;
   color: #fff;
-  background: var(--bg);
+  /* Filled rather than just outlined — an empty white box on a white row was
+     too faint to read as a checkbox at a glance. */
+  background: var(--border);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .check-row__box:not(:disabled):hover {
   border-color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .check-row__box:active {
@@ -488,21 +493,21 @@
 .task-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   max-width: 640px;
 }
 
 .task-page__section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .task-page__section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding-bottom: 6px;
+  padding-bottom: 5px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -515,7 +520,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 40px;
+  height: 34px;
   padding: 0 12px;
   border: 1px dashed var(--border);
   border-radius: 10px;
@@ -540,7 +545,7 @@
   outline: none;
   background: none;
   font: inherit;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--text-h);
 }
 
@@ -555,7 +560,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 7px 4px;
+  padding: 5px 4px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -598,7 +603,7 @@
   border: none;
   border-radius: 6px;
   font: inherit;
-  font-size: 14.5px;
+  font-size: 13.5px;
   text-align: left;
   color: var(--text-h);
   background: none;
@@ -676,7 +681,7 @@
     'name meta';
   width: 100%;
   gap: 1px 12px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   margin: 0 -10px;
   border: none;
   border-radius: 10px;
@@ -706,7 +711,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--text-h);
 }
@@ -1280,9 +1285,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--text);
   border-radius: 5px;
   color: #fff;
+  background: var(--border);
 }
 
 .read__check.is-done .read__check-box {

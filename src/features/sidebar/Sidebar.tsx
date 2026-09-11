@@ -177,7 +177,7 @@ export function Sidebar({
             {/* The mark is the way home — there's no separate Home entry. */}
             <button
               type="button"
-              className={`sidebar-rail__brand${route.kind === 'home' ? ' is-active' : ''}`}
+              className="sidebar-rail__brand"
               onClick={() => {
                 onChangeView('active')
                 onNavigate({ kind: 'home' })
@@ -244,7 +244,7 @@ export function Sidebar({
               {/* The brand is the way home — there's no separate Home entry. */}
               <button
                 type="button"
-                className={`sidebar__brand${route.kind === 'home' ? ' is-active' : ''}`}
+                className="sidebar__brand"
                 onClick={() => {
                   onChangeView('active')
                   onNavigate({ kind: 'home' })

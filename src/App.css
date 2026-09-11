@@ -110,13 +110,15 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+/* Flat, not translucent — same reasoning as the brand button and nav items:
+   this sits on the sidebar's off-white, not the app's plain-white content. */
 .sidebar-rail__icon:hover {
-  background: var(--accent-bg);
+  background: var(--sidebar-active-bg);
   color: var(--accent);
 }
 
 .sidebar-rail__icon.is-active {
-  background: var(--accent-bg);
+  background: var(--sidebar-active-bg);
   color: var(--accent);
 }
 
@@ -146,12 +148,14 @@
   transition: background-color 0.15s ease;
 }
 
-/* No background wash here — the wordmark is already accent-coloured, and a
-   translucent film over the sidebar's off-white looked muddy rather than
-   clean (it read fine on plain white, but not here). */
-.sidebar__brand:hover,
-.sidebar__brand.is-active {
-  background: none;
+/* Hover only — no is-active state. The Tasks nav item already owns the
+   "you're home" highlight, so the logo doesn't double it (that made both
+   light up together, since they go to the same place). A flat, pre-mixed
+   colour rather than the translucent --accent-bg used elsewhere — that read
+   as a dirty smudge over the sidebar's off-white (it only looks clean over
+   plain white, which this isn't). */
+.sidebar__brand:hover {
+  background: var(--sidebar-active-bg);
 }
 
 .sidebar-rail__brand {
@@ -163,9 +167,8 @@
   transition: background-color 0.15s ease;
 }
 
-.sidebar-rail__brand:hover,
-.sidebar-rail__brand.is-active {
-  background: none;
+.sidebar-rail__brand:hover {
+  background: var(--sidebar-active-bg);
 }
 
 .sidebar__brand-text {
@@ -214,15 +217,15 @@
   transition: color 0.15s ease;
 }
 
-/* Colour alone marks hover/active — no background film. Same reasoning as
-   the brand button just above: this sits on the sidebar's off-white, where a
-   translucent accent wash comes out dull rather than crisp. */
+/* Same flat highlight as the brand button above, for the same reason. */
 .sidebar__nav-item:hover {
   color: var(--accent);
+  background: var(--sidebar-active-bg);
 }
 
 .sidebar__nav-item.is-active {
   color: var(--accent);
+  background: var(--sidebar-active-bg);
 }
 
 .sidebar__nav-item.is-active svg,
@@ -268,7 +271,7 @@
   flex-shrink: 0;
   /* Negative inline margins cancel .app's padding so the rule runs edge to
      edge like a real toolbar, instead of floating inset from the content. */
-  margin: 0 calc(var(--app-padding-x) * -1) 20px;
+  margin: 0 calc(var(--app-padding-x) * -1) 14px;
   padding: 0 var(--app-padding-x) 9px;
   border-bottom: 1px solid var(--border);
 }
@@ -308,7 +311,7 @@
 .header-title {
   min-width: 0;
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -1041,7 +1044,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 /* The chips scroll rather than wrapping, so the bar stays one line high
@@ -1596,10 +1599,6 @@
 
   .app {
     padding: 12px var(--app-padding-x) 24px;
-  }
-
-  .app__header {
-    margin-bottom: 20px;
   }
 
   /* On a phone the title wins. The search is an icon until tapped; open, it

@@ -10,6 +10,10 @@
   --accent: #0f766e;
   --accent-bg: rgba(15, 118, 110, 0.09);
   --accent-border: rgba(15, 118, 110, 0.35);
+  /* Flat, not translucent — the sidebar's selection highlight. A low-alpha
+     wash over the sidebar's off-white read as a dirty smudge rather than a
+     clean chip, so this is pre-mixed against --page-bg instead. */
+  --sidebar-active-bg: #d7e9e4;
   /* Colour that carries meaning, not decoration. */
   --ok: #2f8f5b;
   --ok-bg: rgba(47, 143, 91, 0.12);
@@ -25,7 +29,7 @@
   --heading: var(--sans);
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 15px/1.5 var(--sans);
+  font: 14px/1.5 var(--sans);
   letter-spacing: -0.01em;
   color-scheme: light dark;
   color: var(--text);
@@ -51,6 +55,7 @@
     --accent: #2fbfa8;
     --accent-bg: rgba(47, 191, 168, 0.14);
     --accent-border: rgba(47, 191, 168, 0.45);
+    --sidebar-active-bg: #1e372f;
     --ok: #4cbf7e;
     --ok-bg: rgba(76, 191, 126, 0.16);
     --warn: #d9a441;
@@ -73,6 +78,7 @@
   --accent: #2fbfa8;
   --accent-bg: rgba(47, 191, 168, 0.14);
   --accent-border: rgba(47, 191, 168, 0.45);
+  --sidebar-active-bg: #1e372f;
   --ok: #4cbf7e;
   --ok-bg: rgba(76, 191, 126, 0.16);
   --warn: #d9a441;
