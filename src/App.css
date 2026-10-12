@@ -1038,6 +1038,42 @@
   white-space: nowrap;
 }
 
+/* A collapsible section heading: the same bar a section head draws, but the
+   whole thing is a button that folds the content below it away. */
+.section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 5px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font: inherit;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.section-bar:hover .section-title {
+  color: var(--accent);
+}
+
+.section-bar__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-bar__meta svg {
+  flex: none;
+  color: var(--text);
+  transition: transform 0.15s ease;
+}
+
+.section-bar__meta svg.is-open {
+  transform: rotate(180deg);
+}
+
 /* ---------- Today's controls: day / items / tags, inline with the title ---------- */
 
 .task-page__controls {

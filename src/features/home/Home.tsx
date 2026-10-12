@@ -11,6 +11,8 @@ import { TaskFilters } from '../tasks/TaskFilters'
 import { matchesTags } from '../../lib/taskFilters'
 import { getHiddenItems, setHiddenItems } from '../../lib/hiddenItems'
 
+const UPCOMING_KEY = 'notesu-upcoming-open'
+
 // ~390kB of editor, only once someone opens a task.
 const TaskDetailPanel = lazy(() =>
   import('../dailyTasks/TaskDetailPanel').then((m) => ({ default: m.TaskDetailPanel })),
@@ -73,6 +75,24 @@ export function Home({
   useEffect(() => {
     setHiddenItems(hiddenItemIds)
   }, [hiddenItemIds])
+
+  // Upcoming is a glance-ahead, not the main list, so it starts folded away
+  // and remembers whether it was last left open.
+  const [upcomingOpen, setUpcomingOpen] = useState(() => {
+    try {
+      return localStorage.getItem(UPCOMING_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(UPCOMING_KEY, String(upcomingOpen))
+    } catch {
+      // Private window or full storage: it just won't be remembered.
+    }
+  }, [upcomingOpen])
 
   function toggleItemHidden(itemId: number) {
     setHiddenItemIds((ids) =>
@@ -230,33 +250,46 @@ export function Home({
 
       {!searching && upcoming.length > 0 && (
         <section className="task-page__section">
-          <h2 className="section-title">Upcoming</h2>
-          <ul className="home__upcoming">
-            {upcoming.map((item) => {
-              const remaining = remainingByItem.get(item.id) ?? 0
-              return (
-                <li key={item.id}>
-                  <button type="button" className="home__item" onClick={() => onOpenItem(item.id)}>
-                    <span className="home__item-space">{spaceName(item.space_id)}</span>
-                    <span className="home__item-name">
-                      <EntityIcon icon={item.icon} fallback={DEFAULT_ITEM_ICON} size={16} />
-                      {item.name}
-                    </span>
-                    <span className="home__item-meta">
-                      {item.date && (
-                        <span className={`due-chip is-${dueTone(item.date)}`}>{dueLabel(item.date)}</span>
-                      )}
-                      {remaining > 0 && (
-                        <span className="home__item-remaining">
-                          {remaining} {remaining === 1 ? 'task' : 'tasks'} remaining
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          <button
+            type="button"
+            className="section-bar"
+            onClick={() => setUpcomingOpen((v) => !v)}
+            aria-expanded={upcomingOpen}
+          >
+            <span className="section-title">Upcoming</span>
+            <span className="section-bar__meta">
+              <span className="task-page__stat">{upcoming.length}</span>
+              <ChevronDown size={14} className={upcomingOpen ? 'is-open' : undefined} />
+            </span>
+          </button>
+          {upcomingOpen && (
+            <ul className="home__upcoming">
+              {upcoming.map((item) => {
+                const remaining = remainingByItem.get(item.id) ?? 0
+                return (
+                  <li key={item.id}>
+                    <button type="button" className="home__item" onClick={() => onOpenItem(item.id)}>
+                      <span className="home__item-space">{spaceName(item.space_id)}</span>
+                      <span className="home__item-name">
+                        <EntityIcon icon={item.icon} fallback={DEFAULT_ITEM_ICON} size={16} />
+                        {item.name}
+                      </span>
+                      <span className="home__item-meta">
+                        {item.date && (
+                          <span className={`due-chip is-${dueTone(item.date)}`}>{dueLabel(item.date)}</span>
+                        )}
+                        {remaining > 0 && (
+                          <span className="home__item-remaining">
+                            {remaining} {remaining === 1 ? 'task' : 'tasks'} remaining
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </section>
       )}
 
