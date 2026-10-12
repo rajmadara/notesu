@@ -54,6 +54,7 @@ export function ItineraryPage({ page, readOnly }: Props) {
       time: draft.time,
       title,
       note: '',
+      done: false,
     }).catch(() => null)
     setDrafts((d) => ({ ...d, [dayKey]: { time: '', title: '' } }))
     setDraftDays((d) => d.filter((x) => x !== dayKey))

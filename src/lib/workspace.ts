@@ -106,6 +106,7 @@ export interface EntryInput {
   time: string
   title: string
   note: string
+  done: boolean
 }
 export const getPageEntries = (pageId: number) => request<PageEntry[]>(`/pages/${pageId}/entries`)
 export const createPageEntry = (pageId: number, entry: EntryInput) =>

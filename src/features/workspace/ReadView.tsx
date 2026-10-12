@@ -45,6 +45,31 @@ function PageSection({ page }: { page: ReadPage }) {
     )
   }
 
+  if (page.kind === 'checklist') {
+    if (page.entries.length === 0) return null
+    const done = page.entries.filter((e) => e.done).length
+    return (
+      <section className="read__section">
+        <h2 className="read__heading">
+          {page.name}
+          <span className="read__count">
+            {done} of {page.entries.length} ticked
+          </span>
+        </h2>
+        <ul className="read__checklist">
+          {page.entries.map((entry) => (
+            <li key={entry.id} className={`read__check${entry.done ? ' is-done' : ''}`}>
+              <span className="read__check-box" aria-hidden="true">
+                {entry.done && <Check size={11} strokeWidth={3} />}
+              </span>
+              <span className="read__check-title">{entry.title}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
   if (page.kind === 'itinerary') {
     if (page.entries.length === 0) return null
     const days = [...new Set(page.entries.map((e) => e.day ?? UNDATED))]
@@ -133,6 +158,7 @@ export function ReadView({ view }: Props) {
   const hasBody = sections.some(
     (p) =>
       (p.kind === 'tasks' && p.tasks.length > 0) ||
+      (p.kind === 'checklist' && p.entries.length > 0) ||
       (p.kind === 'itinerary' && p.entries.length > 0) ||
       (p.kind === 'people' && p.people.length > 0) ||
       (p.kind === 'notes' && p.content.trim()),

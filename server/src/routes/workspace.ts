@@ -17,7 +17,7 @@ function asyncHandler(handler: RequestHandler): RequestHandler {
   }
 }
 
-const PAGE_KINDS: PageKind[] = ['overview', 'notes', 'tasks', 'itinerary', 'people']
+const PAGE_KINDS: PageKind[] = ['overview', 'notes', 'tasks', 'checklist', 'itinerary', 'people']
 const PERMISSIONS: SharePermission[] = ['view', 'edit']
 const STATUSES: TaskStatus[] = ['not_started', 'in_progress', 'done']
 const PRIORITIES: TaskPriority[] = [
@@ -402,6 +402,7 @@ export function createWorkspaceRouter(store: TaskStore): Router {
           time: str(body.time, 10),
           title: name(body.title),
           note: str(body.note, 2000),
+          done: Boolean(body.done),
         }),
       )
     }),
@@ -416,6 +417,7 @@ export function createWorkspaceRouter(store: TaskStore): Router {
         ...(typeof body.time === 'string' ? { time: str(body.time, 10) } : {}),
         ...(typeof body.title === 'string' ? { title: name(body.title) } : {}),
         ...(typeof body.note === 'string' ? { note: str(body.note, 2000) } : {}),
+        ...('done' in body ? { done: Boolean(body.done) } : {}),
       })
       res.status(204).end()
     }),

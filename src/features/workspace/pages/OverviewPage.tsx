@@ -3,12 +3,13 @@ import { Calendar, Check, Clock, MapPin } from 'lucide-react'
 import type { ItemDetail, PageEntry, PageKind, Task } from '../../../lib/types'
 import { getPageEntries } from '../../../lib/workspace'
 import { dueLabel, dueTone, formatLongDate, formatShortDate, todayISO } from '../../../lib/date'
-import { ListChecks, Route, FileText, Users } from 'lucide-react'
+import { ListChecks, Route, FileText, SquareCheck, Users } from 'lucide-react'
 
 const PAGE_ICONS: Record<PageKind, typeof FileText> = {
   overview: FileText,
   notes: FileText,
   tasks: ListChecks,
+  checklist: SquareCheck,
   itinerary: Route,
   people: Users,
 }

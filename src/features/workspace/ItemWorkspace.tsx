@@ -10,6 +10,7 @@ import {
   Plus,
   Route,
   Share2,
+  SquareCheck,
   Trash2,
   Users,
   X,
@@ -31,6 +32,7 @@ import { ReadView } from './ReadView'
 import { OverviewPage } from './pages/OverviewPage'
 import { NotesPage } from './pages/NotesPage'
 import { TasksPage } from './pages/TasksPage'
+import { ChecklistPage } from './pages/ChecklistPage'
 import { ItineraryPage } from './pages/ItineraryPage'
 import { PeoplePage } from './pages/PeoplePage'
 import { ShareDialog } from './ShareDialog'
@@ -45,6 +47,7 @@ import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 const PAGE_KINDS: { kind: PageKind; label: string; hint: string; icon: typeof FileText }[] = [
   { kind: 'notes', label: 'Notes', hint: 'Free-form writing', icon: FileText },
   { kind: 'tasks', label: 'Tasks', hint: 'A task list, like the main one', icon: ListChecks },
+  { kind: 'checklist', label: 'Checklist', hint: 'Simple things to tick off', icon: SquareCheck },
   { kind: 'itinerary', label: 'Itinerary', hint: 'Day-by-day plan', icon: Route },
   { kind: 'people', label: 'People', hint: 'Who is involved', icon: Users },
 ]
@@ -422,6 +425,9 @@ export function ItemWorkspace({
             readOnly={readOnly}
             onChanged={refreshTasks}
           />
+        )}
+        {current?.kind === 'checklist' && (
+          <ChecklistPage key={current.id} page={current} readOnly={readOnly} />
         )}
         {current?.kind === 'itinerary' && <ItineraryPage key={current.id} page={current} readOnly={readOnly} />}
         {current?.kind === 'people' && (

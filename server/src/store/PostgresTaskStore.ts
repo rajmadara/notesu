@@ -57,6 +57,7 @@ const MIGRATIONS = [
   '0011_tasks_page_kind.sql',
   '0012_page_columns.sql',
   '0013_archive_cascade.sql',
+  '0014_checklist_pages.sql',
 ]
 
 /**
@@ -771,11 +772,11 @@ export class PostgresTaskStore implements TaskStore {
   ): Promise<PageEntry> {
     const { ownerId } = this.requireWrite(await this.pageAccess(userId, pageId))
     const { rows } = await this.pool.query<PageEntry>(
-      `INSERT INTO page_entries (page_id, user_id, day, time, title, note, position)
-       VALUES ($1, $2, $3, $4, $5, $6,
+      `INSERT INTO page_entries (page_id, user_id, day, time, title, note, done, position)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,
                COALESCE((SELECT MAX(position) + 1 FROM page_entries WHERE page_id = $1), 0))
        RETURNING *`,
-      [pageId, ownerId, entry.day, entry.time, entry.title, entry.note],
+      [pageId, ownerId, entry.day, entry.time, entry.title, entry.note, entry.done],
     )
     return rows[0]
   }
@@ -784,7 +785,7 @@ export class PostgresTaskStore implements TaskStore {
     this.requireWrite(await this.entryAccess(userId, id))
     const sets: string[] = []
     const values: unknown[] = []
-    for (const key of ['day', 'time', 'title', 'note'] as const) {
+    for (const key of ['day', 'time', 'title', 'note', 'done'] as const) {
       if (patch[key] === undefined) continue
       values.push(patch[key])
       sets.push(`${key} = $${values.length}`)
@@ -975,7 +976,7 @@ export class PostgresTaskStore implements TaskStore {
     // Columns listed explicitly — page_entries carries a user_id that must
     // not travel with the payload.
     const { rows: entries } = await this.pool.query<ReadEntry & { page_id: number }>(
-      `SELECT e.id, e.page_id, e.day, e.time, e.title, e.note
+      `SELECT e.id, e.page_id, e.day, e.time, e.title, e.note, e.done
        FROM page_entries e JOIN pages p ON p.id = e.page_id
        WHERE p.item_id = $1 ORDER BY e.day NULLS LAST, e.time, e.position, e.id`,
       [itemId],
@@ -1015,7 +1016,7 @@ export class PostgresTaskStore implements TaskStore {
           })),
         entries: entries
           .filter((e) => e.page_id === page.id)
-          .map(({ id, day, time, title, note }) => ({ id, day, time, title, note })),
+          .map(({ id, day, time, title, note, done }) => ({ id, day, time, title, note, done })),
         people: people
           .filter((p) => p.page_id === page.id)
           .map(({ id, name, role, contact, note, fields }) => ({ id, name, role, contact, note, fields })),

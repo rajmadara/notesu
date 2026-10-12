@@ -64,7 +64,7 @@ export interface Item {
   created_at: number
 }
 
-export type PageKind = 'overview' | 'notes' | 'tasks' | 'itinerary' | 'people'
+export type PageKind = 'overview' | 'notes' | 'tasks' | 'checklist' | 'itinerary' | 'people'
 
 export type ColumnType = 'text' | 'number' | 'select'
 
@@ -89,6 +89,11 @@ export interface Page {
   created_at: number
 }
 
+/**
+ * One row on a checklist or itinerary page. A checklist item is simply an
+ * entry with no day or time, ticked with `done`; an itinerary entry uses the
+ * day and time and ignores `done`.
+ */
 export interface PageEntry {
   id: number
   page_id: number
@@ -97,6 +102,7 @@ export interface PageEntry {
   time: string
   title: string
   note: string
+  done: boolean
   position: number
   created_at: number
 }
@@ -172,6 +178,7 @@ export interface ReadEntry {
   time: string
   title: string
   note: string
+  done: boolean
 }
 
 export interface ReadPage {
@@ -236,6 +243,7 @@ export interface EntryPatch {
   time?: string
   title?: string
   note?: string
+  done?: boolean
 }
 
 export interface PersonPatch {
