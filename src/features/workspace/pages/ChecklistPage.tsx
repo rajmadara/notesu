@@ -70,31 +70,28 @@ export function ChecklistPage({ page, readOnly }: Props) {
 
   return (
     <div className="page-checklist">
-      <div className="checklist__head">
-        <span className="checklist__stat">
-          {entries.length === 0
-            ? 'Nothing on the list'
-            : `${doneCount} of ${entries.length} ticked · ${percent}%`}
-        </span>
-      </div>
-
       {entries.length > 0 && (
-        <div className="checklist__progress" role="presentation">
-          <span className="checklist__progress-fill" style={{ width: `${percent}%` }} />
-        </div>
+        <>
+          <div className="checklist__head">
+            <span className="checklist__stat">
+              {doneCount} of {entries.length} ticked · {percent}%
+            </span>
+          </div>
+          <div className="checklist__progress" role="presentation">
+            <span className="checklist__progress-fill" style={{ width: `${percent}%` }} />
+          </div>
+        </>
       )}
 
       {entries.length === 0 ? (
-        <p className="empty-state">
-          {readOnly ? 'Nothing on this list yet.' : 'Add the first thing to tick off.'}
-        </p>
+        readOnly && <p className="empty-state">Nothing on this list yet.</p>
       ) : (
         <ul className="checklist">
           {entries.map((entry) => (
             <li key={entry.id} className={`check-item${entry.done ? ' is-done' : ''}`}>
               <button
                 type="button"
-                className="check-row__box"
+                className="check-row__box check-row__box--round"
                 onClick={() => !readOnly && patch(entry, { done: !entry.done })}
                 disabled={readOnly}
                 aria-label={entry.done ? `Untick ${entry.title}` : `Tick ${entry.title}`}

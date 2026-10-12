@@ -1695,6 +1695,13 @@
   transition: width 0.25s ease;
 }
 
+/* Round where a task's box is rounded-square — the one visible difference
+   between ticking a checklist item and completing a task. */
+.check-row__box--round,
+.read__check--round .read__check-box {
+  border-radius: 50%;
+}
+
 /* Also the list the Archived view lays its tasks out in. */
 .checklist {
   list-style: none;

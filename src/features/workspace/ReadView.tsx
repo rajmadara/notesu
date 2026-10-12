@@ -58,7 +58,7 @@ function PageSection({ page }: { page: ReadPage }) {
         </h2>
         <ul className="read__checklist">
           {page.entries.map((entry) => (
-            <li key={entry.id} className={`read__check${entry.done ? ' is-done' : ''}`}>
+            <li key={entry.id} className={`read__check read__check--round${entry.done ? ' is-done' : ''}`}>
               <span className="read__check-box" aria-hidden="true">
                 {entry.done && <Check size={11} strokeWidth={3} />}
               </span>
