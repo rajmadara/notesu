@@ -39,8 +39,9 @@ import { IconPicker } from './IconPicker'
 import { HeaderTitle } from '../shell/HeaderSlot'
 import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 
-// The page kinds a user can add. Overview isn't here — every item has exactly
-// one, made with the item. Gallery / Schedule / Table are next in line.
+// The page kinds a user can add. Overview isn't here — it's seeded with the
+// item, not chosen from this list — but it's an ordinary, removable page like
+// the rest once it exists. Gallery / Schedule / Table are next in line.
 const PAGE_KINDS: { kind: PageKind; label: string; hint: string; icon: typeof FileText }[] = [
   { kind: 'notes', label: 'Notes', hint: 'Free-form writing', icon: FileText },
   { kind: 'tasks', label: 'Tasks', hint: 'A task list, like the main one', icon: ListChecks },
@@ -294,7 +295,7 @@ export function ItemWorkspace({
       <nav className="tabs" aria-label="Pages">
         {pages.map((page) => {
           const active = page.id === current?.id
-          const Icon = page.kind === 'overview' ? null : PAGE_KINDS.find((k) => k.kind === page.kind)?.icon ?? FileText
+          const Icon = PAGE_KINDS.find((k) => k.kind === page.kind)?.icon ?? FileText
           return renamingPage === page.id ? (
             <input
               key={page.id}
@@ -314,12 +315,12 @@ export function ItemWorkspace({
               type="button"
               className={`tab${active ? ' is-active' : ''}`}
               onClick={() => onSelectPage(page.kind === 'overview' ? null : page.id)}
-              onDoubleClick={() => !readOnly && page.kind !== 'overview' && setRenamingPage(page.id)}
-              title={page.kind !== 'overview' && !readOnly ? 'Double-click to rename' : undefined}
+              onDoubleClick={() => !readOnly && setRenamingPage(page.id)}
+              title={!readOnly ? 'Double-click to rename' : undefined}
             >
               {Icon && <Icon size={14} />}
               {page.name}
-              {active && !readOnly && page.kind !== 'overview' && (
+              {active && !readOnly && (
                 <span
                   role="button"
                   tabIndex={0}
@@ -386,6 +387,13 @@ export function ItemWorkspace({
       )}
 
       <div className="workspace__body">
+        {/* Overview no longer guarantees there's always at least one page —
+            it can be removed like any other now. */}
+        {!current && (
+          <p className="empty-state">
+            {readOnly ? 'Nothing here yet.' : 'No pages left — add one above.'}
+          </p>
+        )}
         {current?.kind === 'overview' && (
           <OverviewPage
             detail={detail}

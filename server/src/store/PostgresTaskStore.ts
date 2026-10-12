@@ -647,8 +647,10 @@ export class PostgresTaskStore implements TaskStore {
   }
 
   async deletePage(userId: string, id: number): Promise<void> {
-    const { page } = this.requireWrite(await this.pageAccess(userId, id))
-    if (page.kind === 'overview') throw forbidden('The Overview page can’t be removed')
+    this.requireWrite(await this.pageAccess(userId, id))
+    // Overview is seeded with every new item but isn't otherwise special —
+    // its facts (date, location, description) live on the item row itself,
+    // not this page, so deleting it loses nothing but the tab.
     await this.pool.query('DELETE FROM pages WHERE id = $1', [id])
   }
 
