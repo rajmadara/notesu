@@ -898,10 +898,12 @@
 }
 
 /* Notes soaks up whatever vertical space the other fields don't use, so the
-   editor grows and shrinks with the window instead of staying a fixed box. */
+   editor grows and shrinks with the window — including when the timer above it
+   is enlarged. The floor keeps it usable on a short window: past it the panel
+   scrolls instead of the editor collapsing into the fields below. */
 .task-detail-panel__field--notes {
   flex: 1;
-  min-height: 0;
+  min-height: 180px;
 }
 
 /* Due date, tags and priority side by side. Wraps when the panel is too
@@ -941,6 +943,276 @@
 
 .task-detail-panel__date:focus {
   border-color: var(--accent-border);
+}
+
+/* ---------- Task timer (top of the task panel) ---------- */
+
+/* Compact by default; .timer--big is the Pomodoro size. */
+.timer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 16px 11px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--page-bg);
+  transition: padding 0.2s ease, gap 0.2s ease;
+}
+
+.timer--big {
+  gap: 10px;
+  padding: 18px 20px 22px;
+}
+
+.timer__top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.timer__seg {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.timer__seg button {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.timer__seg button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.timer__seg button.is-on {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.timer__pomodoro {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.timer__pomodoro:hover,
+.timer__pomodoro.is-on {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.timer__pomodoro.is-on {
+  background: var(--accent-bg);
+}
+
+.timer__digits {
+  margin-top: 2px;
+  font-size: 62px;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  transition: font-size 0.2s ease, color 0.2s ease;
+}
+
+.timer--big .timer__digits {
+  margin-top: 6px;
+  font-size: 88px;
+}
+
+.timer[data-state='running'] .timer__digits {
+  color: var(--accent);
+}
+
+.timer[data-state='done'] .timer__digits {
+  color: var(--ok);
+}
+
+.timer__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 18px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.timer__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.timer[data-state='running'] .timer__dot {
+  background: var(--accent);
+  animation: timer-pulse 1.2s ease-in-out infinite;
+}
+
+.timer[data-state='done'] .timer__dot {
+  background: var(--ok);
+}
+
+@keyframes timer-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.timer__bar {
+  width: 100%;
+  max-width: 420px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.timer__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s linear;
+}
+
+.timer__presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.timer__chip {
+  height: 26px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.timer__chip:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+
+.timer__chip.is-on {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-bg);
+  font-weight: 500;
+}
+
+.timer__chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.timer__custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.timer__custom input {
+  width: 54px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-h);
+  background: var(--bg);
+}
+
+.timer__custom input:disabled {
+  opacity: 0.45;
+}
+
+.timer__controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.timer__btn {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-h);
+  background: var(--bg);
+  cursor: pointer;
+  transition: height 0.2s ease, min-width 0.2s ease;
+}
+
+.timer__btn:hover {
+  border-color: var(--accent-border);
+}
+
+.timer__btn--primary {
+  min-width: 104px;
+  border-color: transparent;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 600;
+}
+
+.timer__btn--primary:hover {
+  border-color: transparent;
+  filter: brightness(1.08);
+}
+
+.timer--big .timer__btn {
+  height: 44px;
+  padding: 0 26px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.timer--big .timer__btn--primary {
+  min-width: 140px;
+}
+
+@media (max-width: 560px) {
+  .timer--big .timer__digits {
+    font-size: 64px;
+  }
 }
 
 /* ---------- Archive ---------- */

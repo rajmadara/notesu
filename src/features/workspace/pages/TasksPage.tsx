@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Page, Task, TaskPriority } from '../../../lib/types'
+import { resetTaskTimer, startTaskTimer, stopTaskTimer } from '../../../lib/db'
 import {
   createPageTask,
   deleteItemTask,
@@ -137,6 +138,20 @@ export function TasksPage({ page, tasks, readOnly, onChanged }: Props) {
             }}
             loadNotes={getItemTaskNotes}
             saveNotes={upsertItemTaskNote}
+            timer={{
+              onStart: async (t) => {
+                await startTaskTimer(t.id).catch(() => null)
+                await onChanged()
+              },
+              onStop: async (t) => {
+                await stopTaskTimer(t.id).catch(() => null)
+                await onChanged()
+              },
+              onReset: async (t) => {
+                await resetTaskTimer(t.id).catch(() => null)
+                await onChanged()
+              },
+            }}
           />
         </Suspense>
       )}

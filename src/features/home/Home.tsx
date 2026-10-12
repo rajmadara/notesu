@@ -8,6 +8,7 @@ import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 import { AddTaskDialog } from '../tasks/AddTaskDialog'
 import { TaskRow } from '../tasks/TaskRow'
 import { TaskFilters } from '../tasks/TaskFilters'
+import type { TimerHandlers } from '../dailyTasks/TaskDetailPanel'
 import { matchesPriority, matchesTags } from '../../lib/taskFilters'
 import { getHiddenItems, setHiddenItems } from '../../lib/hiddenItems'
 
@@ -35,6 +36,7 @@ interface Props {
   onArchiveTask: (task: Task) => Promise<void>
   onDeleteTask: (task: Task) => Promise<void>
   onOpenItem: (itemId: number) => void
+  timer: TimerHandlers
 }
 
 /**
@@ -58,6 +60,7 @@ export function Home({
   onArchiveTask,
   onDeleteTask,
   onOpenItem,
+  timer,
 }: Props) {
   const [title, setTitle] = useState('')
   const [pending, setPending] = useState<string | null>(null)
@@ -327,6 +330,7 @@ export function Home({
             onChangePriority={onChangePriority}
             onChangeDueDate={onChangeDueDate}
             onChangeTags={onChangeTags}
+            timer={timer}
             onRename={onRenameTask}
             onDelete={async (t) => {
               await onDeleteTask(t)

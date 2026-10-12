@@ -12,10 +12,13 @@ import {
   searchTasks,
   setTaskArchived,
   setTaskDueDate,
+  resetTaskTimer,
   setTaskPriority,
   setTaskStatus,
   setTaskTags,
   setTaskTitle,
+  startTaskTimer,
+  stopTaskTimer,
 } from './lib/db'
 import {
   createItem,
@@ -188,6 +191,22 @@ function App() {
 
   async function handleChangeDueDate(task: Task, dueDate: string | null) {
     await setTaskDueDate(task.id, dueDate)
+    await refreshTasks()
+  }
+
+  // Each refreshes the list afterwards so the panel sees the new saved total.
+  async function handleTimerStart(task: Task) {
+    await startTaskTimer(task.id).catch(() => null)
+    await refreshTasks()
+  }
+
+  async function handleTimerStop(task: Task) {
+    await stopTaskTimer(task.id).catch(() => null)
+    await refreshTasks()
+  }
+
+  async function handleTimerReset(task: Task) {
+    await resetTaskTimer(task.id).catch(() => null)
     await refreshTasks()
   }
 
@@ -407,6 +426,7 @@ function App() {
               onArchiveTask={handleArchiveTask}
               onDeleteTask={handleDeleteTask}
               onOpenItem={(itemId) => navigate({ kind: 'item', itemId, pageId: null })}
+              timer={{ onStart: handleTimerStart, onStop: handleTimerStop, onReset: handleTimerReset }}
             />
           )}
           </HeaderSlotContext.Provider>

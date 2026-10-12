@@ -6,6 +6,7 @@ import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
 import { TagPicker } from '../tasks/TagPicker'
 import { PriorityPicker } from '../tasks/PriorityPicker'
+import { TaskTimer } from '../tasks/TaskTimer'
 
 interface Props {
   task: Task
@@ -24,6 +25,14 @@ interface Props {
    */
   loadNotes?: (taskId: number) => Promise<Note[]>
   saveNotes?: (taskId: number, content: string) => Promise<Note>
+  /** Time tracking for the task. Omit it and the panel simply has no timer. */
+  timer?: TimerHandlers
+}
+
+export interface TimerHandlers {
+  onStart: (task: Task) => Promise<void>
+  onStop: (task: Task) => Promise<void>
+  onReset: (task: Task) => Promise<void>
 }
 
 export function TaskDetailPanel({
@@ -37,6 +46,7 @@ export function TaskDetailPanel({
   onArchive,
   loadNotes = getNotesForTask,
   saveNotes = upsertTaskNote,
+  timer,
 }: Props) {
   const [titleValue, setTitleValue] = useState(task.title)
   const [notes, setNotes] = useState('')
@@ -155,6 +165,10 @@ export function TaskDetailPanel({
         </div>
 
         <div className="task-detail-panel__body">
+          {/* Keyed by task so switching tasks starts a fresh timer rather than
+              carrying the last one's countdown over. */}
+          {timer && <TaskTimer key={task.id} task={task} {...timer} />}
+
           <div className="task-detail-panel__field task-detail-panel__field--notes">
             <label className="task-detail-panel__label">Notes</label>
             <NotesEditor

@@ -123,6 +123,20 @@ export async function setTaskTags(id: number, tags: string[]): Promise<void> {
   })
 }
 
+// Time tracking. Start/stop record a run against the task and add it to the
+// task's saved total; reset zeroes that total.
+export async function startTaskTimer(id: number): Promise<void> {
+  await request<{ running_since: number }>(`/${id}/timer/start`, { method: 'POST' })
+}
+
+export async function stopTaskTimer(id: number): Promise<void> {
+  await request<void>(`/${id}/timer/stop`, { method: 'POST' })
+}
+
+export async function resetTaskTimer(id: number): Promise<void> {
+  await request<void>(`/${id}/timer/reset`, { method: 'POST' })
+}
+
 export async function setTaskArchived(id: number, archived: boolean): Promise<void> {
   await request<void>(`/${id}/archive`, {
     method: 'PUT',
