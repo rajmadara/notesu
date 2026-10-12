@@ -8,7 +8,7 @@ import { DEFAULT_ITEM_ICON } from '../../lib/icons'
 import { AddTaskDialog } from '../tasks/AddTaskDialog'
 import { TaskRow } from '../tasks/TaskRow'
 import { TaskFilters } from '../tasks/TaskFilters'
-import { matchesTags } from '../../lib/taskFilters'
+import { matchesPriority, matchesTags } from '../../lib/taskFilters'
 import { getHiddenItems, setHiddenItems } from '../../lib/hiddenItems'
 
 const UPCOMING_KEY = 'notesu-upcoming-open'
@@ -68,6 +68,7 @@ export function Home({
   // would be worse than just defaulting to today every time.
   const [scope, setScope] = useState('today')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedPriorities, setSelectedPriorities] = useState<TaskPriority[]>([])
   // Items the user unchecked — a display preference, kept in this browser
   // rather than the database (see lib/hiddenItems).
   const [hiddenItemIds, setHiddenItemIds] = useState<number[]>(getHiddenItems)
@@ -104,6 +105,12 @@ export function Home({
     setSelectedTags((tags) => (tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag]))
   }
 
+  function togglePriority(priority: TaskPriority) {
+    setSelectedPriorities((ps) =>
+      ps.includes(priority) ? ps.filter((p) => p !== priority) : [...ps, priority],
+    )
+  }
+
   const searching = searchResults !== null
   const today = todayISO()
   const scopeISO = scope === 'today' ? today : scope === 'tomorrow' ? addDaysISO(today, 1) : scope
@@ -123,16 +130,19 @@ export function Home({
   const todays = scopedActive
     .filter((t) => t.item_id === null || !hiddenSet.has(t.item_id))
     .filter((t) => matchesTags(t, selectedTags))
+    .filter((t) => matchesPriority(t, selectedPriorities))
     .sort(byUrgency)
   const later = active
     .filter((t) => t.due_date && t.due_date > scopeISO)
     .filter((t) => t.item_id === null || !hiddenSet.has(t.item_id))
     .filter((t) => matchesTags(t, selectedTags))
+    .filter((t) => matchesPriority(t, selectedPriorities))
     .sort(byUrgency)
   const doneCount = todays.filter((t) => t.status === 'done').length
 
   const listed = searching ? [...searchResults].sort(byUrgency) : todays
-  const isFiltering = hiddenItemIds.length > 0 || selectedTags.length > 0
+  const isFiltering =
+    hiddenItemIds.length > 0 || selectedTags.length > 0 || selectedPriorities.length > 0
 
   const remainingByItem = new Map<number, number>()
   for (const t of active) {
@@ -195,6 +205,8 @@ export function Home({
               onToggleItem={toggleItemHidden}
               selectedTags={selectedTags}
               onToggleTag={toggleTag}
+              selectedPriorities={selectedPriorities}
+              onTogglePriority={togglePriority}
               scope={scope}
               scopeLabel={scopeLabel}
               onChangeScope={setScope}

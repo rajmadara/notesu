@@ -1,29 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Calendar, ChevronDown, Users } from 'lucide-react'
-import type { Item, Task } from '../../lib/types'
+import type { Item, Task, TaskPriority } from '../../lib/types'
 import { tagsOf } from '../../lib/taskFilters'
 import { todayISO } from '../../lib/date'
-
-/** Closes an open dropdown on an outside click or Escape. */
-function useDismiss(open: boolean, onDismiss: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    function onPointerDown(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) onDismiss()
-    }
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onDismiss()
-    }
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open, onDismiss])
-  return ref
-}
+import { PRIORITY_OPTIONS } from '../../lib/priority'
+import { useDismiss } from '../../lib/useDismiss'
+import { PriorityDot } from './PriorityDot'
 
 interface Props {
   /** Everything due by the chosen scope, before the item/tag checkboxes narrow
@@ -35,6 +17,8 @@ interface Props {
   onToggleItem: (itemId: number) => void
   selectedTags: string[]
   onToggleTag: (tag: string) => void
+  selectedPriorities: TaskPriority[]
+  onTogglePriority: (priority: TaskPriority) => void
   /** 'today' | 'tomorrow' | an ISO date. */
   scope: string
   scopeLabel: string
@@ -54,6 +38,8 @@ export function TaskFilters({
   onToggleItem,
   selectedTags,
   onToggleTag,
+  selectedPriorities,
+  onTogglePriority,
   scope,
   scopeLabel,
   onChangeScope,
@@ -61,9 +47,11 @@ export function TaskFilters({
   const [scopeOpen, setScopeOpen] = useState(false)
   const [itemsOpen, setItemsOpen] = useState(false)
   const [tagsOpen, setTagsOpen] = useState(false)
+  const [priorityOpen, setPriorityOpen] = useState(false)
   const scopeRef = useDismiss(scopeOpen, () => setScopeOpen(false))
   const itemsRef = useDismiss(itemsOpen, () => setItemsOpen(false))
   const tagsRef = useDismiss(tagsOpen, () => setTagsOpen(false))
+  const priorityRef = useDismiss(priorityOpen, () => setPriorityOpen(false))
 
   const counts = new Map<number, number>()
   for (const task of tasks) {
@@ -78,6 +66,16 @@ export function TaskFilters({
   const itemOptions = [...present, ...alsoHidden]
 
   const tags = [...new Set(tasks.flatMap(tagsOf))].sort((a, b) => a.localeCompare(b))
+
+  const priorityCounts = new Map<TaskPriority, number>()
+  for (const task of tasks) {
+    priorityCounts.set(task.priority, (priorityCounts.get(task.priority) ?? 0) + 1)
+  }
+  // Pointless to offer when every task is unprioritised — unless something is
+  // already ticked, which must stay reachable so it can be cleared.
+  const showPriority =
+    selectedPriorities.length > 0 ||
+    PRIORITY_OPTIONS.some((o) => o.value !== 'none' && priorityCounts.has(o.value))
 
   // A shared item's tasks are someone else's, so its row says whose.
   const ownerOf = (itemId: number) =>
@@ -199,6 +197,39 @@ export function TaskFilters({
                     onChange={() => onToggleTag(tag)}
                   />
                   <span className="menu__item-label">{tag}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showPriority && (
+        <div className="menu-anchor" ref={priorityRef}>
+          <button
+            type="button"
+            className={`filter-trigger${selectedPriorities.length > 0 ? ' is-active' : ''}`}
+            onClick={() => setPriorityOpen((v) => !v)}
+            aria-expanded={priorityOpen}
+          >
+            Priority
+            {selectedPriorities.length > 0 && (
+              <span className="filter-trigger__count">{selectedPriorities.length}</span>
+            )}
+            <ChevronDown size={12} />
+          </button>
+          {priorityOpen && (
+            <div className="menu menu--left">
+              {PRIORITY_OPTIONS.map((option) => (
+                <label key={option.value} className="menu__item menu__item--checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedPriorities.includes(option.value)}
+                    onChange={() => onTogglePriority(option.value)}
+                  />
+                  <PriorityDot value={option.value} />
+                  <span className="menu__item-label">{option.label}</span>
+                  <span className="menu__item-count">{priorityCounts.get(option.value) ?? 0}</span>
                 </label>
               ))}
             </div>

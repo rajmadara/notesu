@@ -5,13 +5,7 @@ import { formatTimestamp } from '../../lib/date'
 import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
 import { TagPicker } from '../tasks/TagPicker'
-
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-  { value: 'urgent_important', label: 'Urgent & important' },
-  { value: 'urgent_not_important', label: 'Urgent, not important' },
-  { value: 'important_not_urgent', label: 'Important, not urgent' },
-  { value: 'none', label: 'None' },
-]
+import { PriorityPicker } from '../tasks/PriorityPicker'
 
 interface Props {
   task: Task
@@ -175,39 +169,33 @@ export function TaskDetailPanel({
             {aiError && <div className="task-item__note-error">{aiError}</div>}
           </div>
 
-          <div className="task-detail-panel__field">
-            <label className="task-detail-panel__label" htmlFor="task-due-date">
-              Due date
-            </label>
-            <input
-              id="task-due-date"
-              type="date"
-              className="task-detail-panel__date"
-              value={task.due_date ?? ''}
-              onChange={(e) => onChangeDueDate(task, e.target.value || null)}
-            />
-          </div>
+          {/* Three short fields share a row rather than each taking a full-width
+              line; they wrap onto their own lines when the panel is narrow. */}
+          <div className="task-detail-panel__props">
+            <div className="task-detail-panel__field">
+              <label className="task-detail-panel__label" htmlFor="task-due-date">
+                Due date
+              </label>
+              <input
+                id="task-due-date"
+                type="date"
+                className="task-detail-panel__date"
+                value={task.due_date ?? ''}
+                onChange={(e) => onChangeDueDate(task, e.target.value || null)}
+              />
+            </div>
 
-          <div className="task-detail-panel__field">
-            <label className="task-detail-panel__label">Tags</label>
-            <TagPicker value={task.tags} onChange={(tags) => onChangeTags(task, tags)} />
-          </div>
+            <div className="task-detail-panel__field task-detail-panel__field--grow">
+              <label className="task-detail-panel__label">Tags</label>
+              <TagPicker value={task.tags} onChange={(tags) => onChangeTags(task, tags)} />
+            </div>
 
-          <div className="task-detail-panel__field">
-            <label className="task-detail-panel__label">Priority</label>
-            <div className="priority-picker">
-              {PRIORITY_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`priority-option priority-option--${option.value}${task.priority === option.value ? ' is-selected' : ''}`}
-                  onClick={() => onChangePriority(task, option.value)}
-                  aria-pressed={task.priority === option.value}
-                >
-                  <span className="priority-option__dot" aria-hidden="true" />
-                  {option.label}
-                </button>
-              ))}
+            <div className="task-detail-panel__field">
+              <label className="task-detail-panel__label">Priority</label>
+              <PriorityPicker
+                value={task.priority}
+                onChange={(priority) => onChangePriority(task, priority)}
+              />
             </div>
           </div>
 

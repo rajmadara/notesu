@@ -228,6 +228,13 @@
   animation: pop 0.15s ease;
 }
 
+/* Opens upward but keeps .menu's right alignment — for a trigger at the right
+   edge of its container, where .menu--up's left alignment would run off it. */
+.menu--above {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 .menu--up {
   top: auto;
   bottom: calc(100% + 6px);

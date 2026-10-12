@@ -739,39 +739,9 @@
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-/* Four Eisenhower quadrants need their names visible — a colour dot alone
-   can't distinguish "urgent, not important" from "important, not urgent". */
-.priority-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.priority-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 30px;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
-  background: var(--bg);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.priority-option:hover {
-  color: var(--text-h);
-  border-color: var(--text);
-}
-
-.priority-option__dot {
+/* The quadrant's colour. Always shown beside its name — a colour alone can't
+   tell "urgent, not important" from "important, not urgent". */
+.priority-dot {
   width: 9px;
   height: 9px;
   flex-shrink: 0;
@@ -779,26 +749,50 @@
   background: var(--priority-color, var(--border));
 }
 
-.priority-option--urgent_important {
+.priority-dot--urgent_important {
   --priority-color: #dc2626;
 }
 
-.priority-option--urgent_not_important {
+.priority-dot--urgent_not_important {
   --priority-color: #d97706;
 }
 
-.priority-option--important_not_urgent {
+.priority-dot--important_not_urgent {
   --priority-color: #2563eb;
 }
 
-.priority-option--none {
+.priority-dot--none {
   --priority-color: #b3ad9e;
 }
 
-.priority-option.is-selected {
+/* A dropdown trigger that looks like the date and tag inputs beside it. */
+.field-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
   color: var(--text-h);
-  border-color: var(--priority-color);
-  background: color-mix(in srgb, var(--priority-color) 10%, transparent);
+  background: var(--bg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease;
+}
+
+.field-select:hover,
+.field-select[aria-expanded='true'] {
+  border-color: var(--accent-border);
+}
+
+.field-select__chevron {
+  flex: none;
+  margin-left: 2px;
+  color: var(--text);
 }
 
 .task-item__note-error {
@@ -908,6 +902,20 @@
 .task-detail-panel__field--notes {
   flex: 1;
   min-height: 0;
+}
+
+/* Due date, tags and priority side by side. Wraps when the panel is too
+   narrow for all three, rather than squeezing them. */
+.task-detail-panel__props {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 18px;
+}
+
+.task-detail-panel__field--grow {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .task-detail-panel__label {
@@ -1280,7 +1288,7 @@
 .tag-picker__menu {
   position: absolute;
   z-index: 5;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px);
   left: 0;
   right: 0;
   max-height: 200px;
