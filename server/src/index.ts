@@ -11,7 +11,10 @@ import { createAiRouter } from './routes/ai.js'
 
 loadEnv()
 
-const PORT = process.env.PORT ?? 3001
+// API_PORT wins over PORT: some tools launch `npm run dev` with PORT set to the
+// web server's port, and the front end expects the API on 3001. Hosts that only
+// set PORT still work.
+const PORT = process.env.API_PORT ?? process.env.PORT ?? 3001
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set. Add it to server/.env (see server/.env.example).')
