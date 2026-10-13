@@ -898,12 +898,12 @@
 }
 
 /* Notes soaks up whatever vertical space the other fields don't use, so the
-   editor grows and shrinks with the window — including when the timer above it
-   is enlarged. The floor keeps it usable on a short window: past it the panel
-   scrolls instead of the editor collapsing into the fields below. */
+   editor grows with the window — including when the timer above it is open.
+   It never shrinks below its own content (label, toolbar, and the editor's
+   200px minimum): past that the panel scrolls, instead of the editor spilling
+   over the fields below. */
 .task-detail-panel__field--notes {
-  flex: 1;
-  min-height: 180px;
+  flex: 1 0 auto;
 }
 
 /* Due date, tags and priority side by side. Wraps when the panel is too
@@ -945,33 +945,63 @@
   border-color: var(--accent-border);
 }
 
-/* ---------- Task timer (top of the task panel) ---------- */
+/* ---------- Task timer (opened from the Pomodoro button) ---------- */
 
-/* Compact by default; .timer--big is the Pomodoro size. */
+/* Not on screen until asked for. When opened it's a card above the notes, and
+   the notes move down to make room (the panel scrolls if they no longer fit). */
 .timer {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 9px 16px 11px;
+  gap: 8px;
+  padding: 12px 20px 18px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--page-bg);
-  transition: padding 0.2s ease, gap 0.2s ease;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  animation: timer-open 0.2s ease;
 }
 
-.timer--big {
-  gap: 10px;
-  padding: 18px 20px 22px;
+@keyframes timer-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
-.timer__top {
+.timer__head {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.timer__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.timer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.timer__close:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .timer__seg {
@@ -983,11 +1013,11 @@
 }
 
 .timer__seg button {
-  padding: 4px 12px;
+  padding: 3px 10px;
   border: none;
   border-radius: 7px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
   background: none;
@@ -1004,45 +1034,16 @@
   background: var(--accent-bg);
 }
 
-.timer__pomodoro {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text);
-  background: var(--bg);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.timer__pomodoro:hover,
-.timer__pomodoro.is-on {
-  border-color: var(--accent-border);
-  color: var(--accent);
-}
-
-.timer__pomodoro.is-on {
-  background: var(--accent-bg);
-}
-
 .timer__digits {
   margin-top: 2px;
-  font-size: 62px;
+  font-size: clamp(46px, 12vw, 78px);
   line-height: 1.05;
   font-weight: 600;
   letter-spacing: -0.035em;
   color: var(--text-h);
   font-variant-numeric: tabular-nums;
   user-select: none;
-  transition: font-size 0.2s ease, color 0.2s ease;
-}
-
-.timer--big .timer__digits {
-  margin-top: 6px;
-  font-size: 88px;
+  transition: color 0.2s ease;
 }
 
 .timer[data-state='running'] .timer__digits {
@@ -1056,9 +1057,9 @@
 .timer__status {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 18px;
-  font-size: 12.5px;
+  gap: 6px;
+  min-height: 16px;
+  font-size: 12px;
   color: var(--text);
 }
 
@@ -1086,7 +1087,7 @@
 
 .timer__bar {
   width: 100%;
-  max-width: 420px;
+  max-width: 320px;
   height: 4px;
   border-radius: 999px;
   background: var(--border);
@@ -1110,12 +1111,12 @@
 }
 
 .timer__chip {
-  height: 26px;
-  padding: 0 11px;
+  height: 24px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text);
   background: var(--bg);
   cursor: pointer;
@@ -1140,19 +1141,19 @@
 .timer__custom {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 5px;
+  font-size: 12px;
   color: var(--text);
 }
 
 .timer__custom input {
-  width: 54px;
-  height: 26px;
-  padding: 0 8px;
+  width: 48px;
+  height: 24px;
+  padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 7px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-h);
   background: var(--bg);
 }
@@ -1164,21 +1165,20 @@
 .timer__controls {
   display: flex;
   gap: 8px;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .timer__btn {
   height: 32px;
-  padding: 0 16px;
+  padding: 0 18px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-h);
   background: var(--bg);
   cursor: pointer;
-  transition: height 0.2s ease, min-width 0.2s ease;
 }
 
 .timer__btn:hover {
@@ -1196,23 +1196,6 @@
 .timer__btn--primary:hover {
   border-color: transparent;
   filter: brightness(1.08);
-}
-
-.timer--big .timer__btn {
-  height: 44px;
-  padding: 0 26px;
-  border-radius: 12px;
-  font-size: 15px;
-}
-
-.timer--big .timer__btn--primary {
-  min-width: 140px;
-}
-
-@media (max-width: 560px) {
-  .timer--big .timer__digits {
-    font-size: 64px;
-  }
 }
 
 /* ---------- Archive ---------- */
@@ -1710,8 +1693,9 @@
 
 .notes-editor__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 4px 2px;
   flex-shrink: 0;
 }
 
@@ -1776,9 +1760,16 @@
   flex-shrink: 0;
 }
 
+/* Pomodoro and AI sit together at the right end of the toolbar. */
+.notes-editor__end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .notes-editor__ai {
   position: relative;
-  margin-left: auto;
 }
 
 .notes-editor__tool--ai {
@@ -1795,6 +1786,34 @@
 .notes-editor__tool--ai:hover {
   background: var(--accent);
   color: #fff;
+}
+
+.notes-editor__tool--pomodoro {
+  width: auto;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.notes-editor__tool--pomodoro[data-state='running'] {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.notes-editor__tool--pomodoro[data-state='done'] {
+  color: var(--ok);
+}
+
+/* Shown in place of the icon while a run is going with the card closed. */
+.notes-editor__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: timer-pulse 1.2s ease-in-out infinite;
 }
 
 .notes-editor__ai-menu {
