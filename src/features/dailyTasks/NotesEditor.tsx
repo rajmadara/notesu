@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
@@ -22,8 +22,6 @@ interface Props {
   canUndo: boolean
   onAiAction: (action: NoteAction) => void
   onUndoAiAction: () => void
-  /** Extra toolbar buttons, shown just left of the AI button. */
-  toolbarExtra?: ReactNode
 }
 
 export function NotesEditor({
@@ -34,7 +32,6 @@ export function NotesEditor({
   canUndo,
   onAiAction,
   onUndoAiAction,
-  toolbarExtra,
 }: Props) {
   const [aiOpen, setAiOpen] = useState(false)
   const aiRef = useRef<HTMLDivElement>(null)
@@ -48,6 +45,9 @@ export function NotesEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
     ],
+    // The box has no visible heading — the placeholder says what it is — so
+    // give it a name for screen readers.
+    editorProps: { attributes: { 'aria-label': 'Notes' } },
     content: normalizeNoteContent(value),
     onUpdate: ({ editor }) => onChange(editor.isEmpty ? '' : editor.getHTML()),
     onBlur: () => onBlur(),
@@ -182,47 +182,44 @@ export function NotesEditor({
           </svg>
         </button>
 
-        <div className="notes-editor__end">
-          {toolbarExtra}
-          <div className="notes-editor__ai" ref={aiRef}>
-            <button
-              type="button"
-              className={`notes-editor__tool notes-editor__tool--ai${aiOpen ? ' is-active' : ''}`}
-              onClick={() => setAiOpen((v) => !v)}
-              disabled={aiBusy !== null}
-              aria-expanded={aiOpen}
-              title="Rewrite with AI"
-            >
-              {aiBusy ? 'Working…' : 'AI'}
-            </button>
+        <div className="notes-editor__ai" ref={aiRef}>
+          <button
+            type="button"
+            className={`notes-editor__tool notes-editor__tool--ai${aiOpen ? ' is-active' : ''}`}
+            onClick={() => setAiOpen((v) => !v)}
+            disabled={aiBusy !== null}
+            aria-expanded={aiOpen}
+            title="Rewrite with AI"
+          >
+            {aiBusy ? 'Working…' : 'AI'}
+          </button>
 
-            {aiOpen && (
-              <div className="notes-editor__ai-menu">
-                {AI_ACTIONS.map((action) => (
-                  <button
-                    key={action.value}
-                    type="button"
-                    className="notes-editor__ai-item"
-                    onClick={() => handleAiSelect(action.value)}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-                {canUndo && (
-                  <button
-                    type="button"
-                    className="notes-editor__ai-item notes-editor__ai-item--undo"
-                    onClick={() => {
-                      setAiOpen(false)
-                      onUndoAiAction()
-                    }}
-                  >
-                    Undo last rewrite
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {aiOpen && (
+            <div className="notes-editor__ai-menu">
+              {AI_ACTIONS.map((action) => (
+                <button
+                  key={action.value}
+                  type="button"
+                  className="notes-editor__ai-item"
+                  onClick={() => handleAiSelect(action.value)}
+                >
+                  {action.label}
+                </button>
+              ))}
+              {canUndo && (
+                <button
+                  type="button"
+                  className="notes-editor__ai-item notes-editor__ai-item--undo"
+                  onClick={() => {
+                    setAiOpen(false)
+                    onUndoAiAction()
+                  }}
+                >
+                  Undo last rewrite
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

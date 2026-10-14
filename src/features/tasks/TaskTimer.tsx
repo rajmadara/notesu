@@ -30,8 +30,8 @@ interface Props {
   onStart: (task: Task) => Promise<void>
   onStop: (task: Task, at?: number) => Promise<void>
   onReset: (task: Task) => Promise<void>
-  /** The panel content that sits below the timer; the timer's card is drawn
-   *  above it, so opening the timer pushes this down. */
+  /** The whole panel. The Pomodoro button and the timer card are drawn by
+   *  PomodoroButton and TimerCard wherever the panel places them. */
   children: ReactNode
 }
 
@@ -42,6 +42,8 @@ interface TimerView {
   running: boolean
   digits: string
   buttonRef: RefObject<HTMLButtonElement | null>
+  /** The expanded card, ready to place. */
+  card: ReactNode
 }
 
 const TimerContext = createContext<TimerView | null>(null)
@@ -50,7 +52,7 @@ const TimerContext = createContext<TimerView | null>(null)
  * A stopwatch or a countdown for one task.
  *
  * There's no timer on screen until it's asked for: the "Pomodoro" button (see
- * PomodoroButton, which lives in the notes toolbar) opens it as a card above
+ * PomodoroButton, in the panel header) opens it as a card (see TimerCard) above
  * the notes, pushing them down, with the stopwatch / timer choice at the top.
  * Collapsing the card only hides it; a run carries on, and the button shows the
  * live clock meanwhile. Closing the *panel* doesn't stop a run either: it keeps
@@ -263,76 +265,85 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
     </>
   )
 
-  const view: TimerView = { open, setOpen, state, running, digits, buttonRef }
+  // The expanded card. Drawn by <TimerCard />, wherever the panel puts it.
+  const card = (
+      <section className="timer" data-state={state} aria-label="Pomodoro timer">
+        <div className="timer__head">
+          <span className="timer__name">Pomodoro</span>
+          {modeSwitch}
+          <button
+            ref={collapseBtn}
+            type="button"
+            className="timer__close"
+            onClick={() => setOpen(false)}
+            aria-label="Close the timer"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-  return (
-    <TimerContext.Provider value={view}>
-      {open && (
-        <section className="timer" data-state={state} aria-label="Pomodoro timer">
-          <div className="timer__head">
-            <span className="timer__name">Pomodoro</span>
-            {modeSwitch}
-            <button
-              ref={collapseBtn}
-              type="button"
-              className="timer__close"
-              onClick={() => setOpen(false)}
-              aria-label="Close the timer"
-              title="Close"
-            >
-              <X size={16} />
+        <div className="timer__main">
+          <div className="timer__reading">
+            <div className="timer__digits">{digits}</div>
+            <div className="timer__status">
+              <span className="timer__dot" />
+              {status}
+              {mode === 'timer' && <span className="timer__spent"> · {formatSpent(taskMs)} on this task</span>}
+            </div>
+          </div>
+          <div className="timer__controls">
+            <button type="button" className="timer__btn timer__btn--primary" onClick={running ? pause : start}>
+              {toggleLabel}
+            </button>
+            <button type="button" className="timer__btn" onClick={reset}>
+              Reset
             </button>
           </div>
+        </div>
 
-          <div className="timer__main">
-            <div className="timer__reading">
-              <div className="timer__digits">{digits}</div>
-              <div className="timer__status">
-                <span className="timer__dot" />
-                {status}
-                {mode === 'timer' && <span className="timer__spent"> · {formatSpent(taskMs)} on this task</span>}
-              </div>
-            </div>
-            <div className="timer__controls">
-              <button type="button" className="timer__btn timer__btn--primary" onClick={running ? pause : start}>
-                {toggleLabel}
-              </button>
-              <button type="button" className="timer__btn" onClick={reset}>
-                Reset
-              </button>
-            </div>
-          </div>
-
-          {countdownSetup}
-        </section>
-      )}
-      {children}
-    </TimerContext.Provider>
+        {countdownSetup}
+      </section>
   )
+
+  const view: TimerView = { open, setOpen, state, running, digits, buttonRef, card }
+
+  return <TimerContext.Provider value={view}>{children}</TimerContext.Provider>
+}
+
+/** The timer card, when it's open. Place it where the panel wants it; the
+ *  content below it moves down. */
+export function TimerCard() {
+  const timer = useContext(TimerContext)
+  return timer?.open ? timer.card : null
 }
 
 /**
- * The toolbar button that opens the timer. While a run is going and the card is
- * closed it shows the live clock (and "Time's up" when a countdown has ended),
- * so a running timer is never invisible.
+ * The button that opens (and closes) the timer. While a run is going and the
+ * card is closed it shows the live clock (and "Time's up" when a countdown has
+ * ended), so a running timer is never invisible.
  */
 export function PomodoroButton() {
   const timer = useContext(TimerContext)
   if (!timer) return null
   const { open, setOpen, state, running, digits, buttonRef } = timer
   const showClock = !open && running
+  const text = showClock ? digits : !open && state === 'done' ? "Time's up" : 'Pomodoro'
   return (
     <button
       ref={buttonRef}
       type="button"
-      className={`notes-editor__tool notes-editor__tool--pomodoro${open ? ' is-active' : ''}`}
+      className={`timer-trigger${open ? ' is-open' : ''}`}
       data-state={open ? 'idle' : state}
       aria-expanded={open}
       onClick={() => setOpen(!open)}
+      aria-label={text === 'Pomodoro' ? 'Pomodoro timer' : text}
       title="Stopwatch or timer for this task"
     >
-      {showClock ? <span className="notes-editor__pulse" /> : <TimerIcon size={13} />}
-      {showClock ? digits : !open && state === 'done' ? "Time's up" : 'Pomodoro'}
+      {showClock ? <span className="timer-trigger__pulse" /> : <TimerIcon size={14} />}
+      {/* The plain name gives way to the icon on a narrow screen; a live clock
+          or "Time's up" is information, so it stays. */}
+      <span className={text === 'Pomodoro' ? 'timer-trigger__label' : undefined}>{text}</span>
     </button>
   )
 }

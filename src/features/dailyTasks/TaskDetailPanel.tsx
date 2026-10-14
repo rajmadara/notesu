@@ -6,7 +6,7 @@ import { htmlToPlainText, plainTextToHtml } from '../../lib/richText'
 import { NotesEditor, type NoteAction } from './NotesEditor'
 import { TagPicker } from '../tasks/TagPicker'
 import { PriorityPicker } from '../tasks/PriorityPicker'
-import { PomodoroButton, TaskTimerProvider } from '../tasks/TaskTimer'
+import { PomodoroButton, TaskTimerProvider, TimerCard } from '../tasks/TaskTimer'
 
 interface Props {
   task: Task
@@ -141,7 +141,6 @@ export function TaskDetailPanel({
 
   const notesField = (
     <div className="task-detail-panel__field task-detail-panel__field--notes">
-      <label className="task-detail-panel__label">Notes</label>
       <NotesEditor
         value={notes}
         onChange={setNotes}
@@ -150,13 +149,12 @@ export function TaskDetailPanel({
         canUndo={previousNotes !== null}
         onAiAction={handleNoteAction}
         onUndoAiAction={handleUndoNoteAction}
-        toolbarExtra={timer ? <PomodoroButton /> : undefined}
       />
       {aiError && <div className="task-item__note-error">{aiError}</div>}
     </div>
   )
 
-  return (
+  const panel = (
     <div className="task-detail-panel__backdrop" onClick={onClose}>
       <div className="task-detail-panel" onClick={(e) => e.stopPropagation()}>
         <div className="task-detail-panel__header">
@@ -171,6 +169,7 @@ export function TaskDetailPanel({
             }}
             aria-label="Task title"
           />
+          {timer && <PomodoroButton />}
           <button
             type="button"
             className="task-detail-panel__close"
@@ -182,17 +181,10 @@ export function TaskDetailPanel({
         </div>
 
         <div className="task-detail-panel__body">
-          {/* The timer draws its card above the notes when opened (from the
-              Pomodoro button in the notes toolbar), pushing them down. Keyed by
-              task so switching tasks starts a fresh timer rather than carrying
-              the last one's countdown over. */}
-          {timer ? (
-            <TaskTimerProvider key={task.id} task={task} {...timer}>
-              {notesField}
-            </TaskTimerProvider>
-          ) : (
-            notesField
-          )}
+          {/* Opened from the Pomodoro button in the header, the timer's card
+              sits above the notes and pushes them down. */}
+          {timer && <TimerCard />}
+          {notesField}
 
           {/* Three short fields share a row rather than each taking a full-width
               line; they wrap onto their own lines when the panel is narrow. */}
@@ -249,5 +241,16 @@ export function TaskDetailPanel({
         </div>
       </div>
     </div>
+  )
+
+  // Keyed by task so switching tasks starts a fresh timer rather than carrying
+  // the last one's countdown over. The provider draws nothing of its own: it
+  // just lets the header's button and the body's card share one timer.
+  return timer ? (
+    <TaskTimerProvider key={task.id} task={task} {...timer}>
+      {panel}
+    </TaskTimerProvider>
+  ) : (
+    panel
   )
 }

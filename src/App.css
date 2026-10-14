@@ -986,6 +986,57 @@
   border-color: var(--accent-border);
 }
 
+/* The Pomodoro button in the panel header, next to the task it times. */
+.timer-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.timer-trigger:hover,
+.timer-trigger.is-open {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.timer-trigger.is-open {
+  background: var(--accent-bg);
+}
+
+/* A run going with the card closed: the clock itself, in the accent colour. */
+.timer-trigger[data-state='running'] {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.timer-trigger[data-state='done'] {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.timer-trigger__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: timer-pulse 1.2s ease-in-out infinite;
+}
+
 /* ---------- Task timer (opened from the Pomodoro button) ---------- */
 
 /* Not on screen until asked for. When opened it's a slim strip above the notes —
@@ -1734,25 +1785,37 @@
 
 /* ---------- Notes editor (task panel) ---------- */
 
+/* One box: the formatting toolbar on top, the writing area below. The toolbar
+   sits inside the border, so there's no separate heading or strip above it. */
 .notes-editor {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   flex: 1;
   min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--page-bg);
+}
+
+.notes-editor:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .notes-editor__toolbar {
+  --tool: 28px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 2px;
   flex-shrink: 0;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .notes-editor__tool {
-  width: 28px;
-  height: 28px;
+  width: var(--tool);
+  height: var(--tool);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1811,16 +1874,9 @@
   flex-shrink: 0;
 }
 
-/* Pomodoro and AI sit together at the right end of the toolbar. */
-.notes-editor__end {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
 .notes-editor__ai {
   position: relative;
+  margin-left: auto;
 }
 
 .notes-editor__tool--ai {
@@ -1837,34 +1893,6 @@
 .notes-editor__tool--ai:hover {
   background: var(--accent);
   color: #fff;
-}
-
-.notes-editor__tool--pomodoro {
-  width: auto;
-  gap: 5px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.notes-editor__tool--pomodoro[data-state='running'] {
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.notes-editor__tool--pomodoro[data-state='done'] {
-  color: var(--ok);
-}
-
-/* Shown in place of the icon while a run is going with the card closed. */
-.notes-editor__pulse {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: timer-pulse 1.2s ease-in-out infinite;
 }
 
 .notes-editor__ai-menu {
@@ -1916,22 +1944,14 @@
 
 .notes-editor__content .tiptap {
   flex: 1;
-  min-height: 200px;
+  min-height: 170px;
   overflow-y: auto;
   box-sizing: border-box;
-  border: 1px solid var(--border);
-  border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
   line-height: 1.5;
-  background: var(--page-bg);
   color: var(--text-h);
   outline: none;
-}
-
-.notes-editor__content .tiptap:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .notes-editor__content .tiptap p,
@@ -2141,13 +2161,31 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
 
+/* A phone: a tighter toolbar so it fits on one row inside the notes box, and
+   Pomodoro as just its icon until it has a clock to show. A tablet has room for
+   all of it as it is. */
+@media (max-width: 480px) {
   .notes-editor__toolbar {
-    flex-wrap: wrap;
-    row-gap: 4px;
+    --tool: 26px;
+    padding: 4px 6px;
   }
 
-  .notes-editor__ai {
-    margin-left: 0;
+  .notes-editor__divider {
+    margin: 0 3px;
+  }
+
+  .notes-editor__tool--ai {
+    min-width: 30px;
+    padding: 0 8px;
+  }
+
+  .timer-trigger__label {
+    display: none;
+  }
+
+  .timer-trigger {
+    padding: 0 8px;
   }
 }
