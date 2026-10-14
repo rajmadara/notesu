@@ -283,7 +283,12 @@ export interface TaskStore {
   sweepArchive(userId: string): Promise<number>
   setTaskDueDate(userId: string, id: number, dueDate: string | null): Promise<void>
   startTaskTimer(userId: string, id: number): Promise<number>
-  stopTaskTimer(userId: string, id: number): Promise<void>
+  /**
+   * Ends the run and adds it to the task's total. `at` (epoch ms) says the run
+   * really ended earlier than now — a countdown that hit zero while nobody was
+   * looking — so the time after it isn't counted. Clamped to [start, now].
+   */
+  stopTaskTimer(userId: string, id: number, at?: number): Promise<void>
   resetTaskTimer(userId: string, id: number): Promise<void>
   getNotesForTask(userId: string, taskId: number): Promise<Note[]>
   upsertTaskNote(userId: string, taskId: number, content: string): Promise<Note>

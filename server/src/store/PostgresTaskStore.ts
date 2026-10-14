@@ -285,14 +285,16 @@ export class PostgresTaskStore implements TaskStore {
     return now
   }
 
-  async stopTaskTimer(userId: string, id: number): Promise<void> {
+  async stopTaskTimer(userId: string, id: number, at?: number): Promise<void> {
     const { rows } = await this.pool.query<Task>(
       'SELECT * FROM tasks WHERE id = $1 AND user_id = $2',
       [id, userId],
     )
     const task = rows[0]
     if (!task || task.running_since === null) return
-    const elapsed = Math.floor((Date.now() - Number(task.running_since)) / 1000)
+    const started = Number(task.running_since)
+    const end = at === undefined ? Date.now() : Math.min(Date.now(), Math.max(started, at))
+    const elapsed = Math.floor((end - started) / 1000)
     await this.pool.query(
       'UPDATE tasks SET seconds = seconds + $1, running_since = NULL WHERE id = $2 AND user_id = $3',
       [elapsed, id, userId],

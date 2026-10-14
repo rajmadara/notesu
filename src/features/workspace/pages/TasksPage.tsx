@@ -143,8 +143,8 @@ export function TasksPage({ page, tasks, readOnly, onChanged }: Props) {
                 await startTaskTimer(t.id).catch(() => null)
                 await onChanged()
               },
-              onStop: async (t) => {
-                await stopTaskTimer(t.id).catch(() => null)
+              onStop: async (t, at) => {
+                await stopTaskTimer(t.id, at).catch(() => null)
                 await onChanged()
               },
               onReset: async (t) => {

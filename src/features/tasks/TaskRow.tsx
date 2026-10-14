@@ -1,12 +1,40 @@
+import { useEffect, useState } from 'react'
 import { Archive, Check, Users } from 'lucide-react'
 import type { Task } from '../../lib/types'
 import { dueLabel, dueTone } from '../../lib/date'
 import { archivingSoon, daysUntilArchived } from '../../lib/archive'
+import { runClock } from '../../lib/timer'
 
 const PRIORITY_LABEL: Record<string, string> = {
   urgent_important: 'Urgent & important',
   urgent_not_important: 'Urgent, not important',
   important_not_urgent: 'Important, not urgent',
+}
+
+/**
+ * The live clock of a task whose timer is running — in the background, with its
+ * panel closed. It ticks on its own, so only running rows pay for a timer.
+ * Clicking it opens the task.
+ */
+function RunningClock({ task, onOpen }: { task: Task; onOpen: (task: Task) => void }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(id)
+  }, [])
+  const clock = runClock(task, now)
+  if (!clock) return null
+  return (
+    <button
+      type="button"
+      className={`task-row__timer${clock.done ? ' is-done' : ''}`}
+      onClick={() => onOpen(task)}
+      title="Timer running on this task"
+    >
+      <span className="task-row__timer-dot" />
+      {clock.label}
+    </button>
+  )
 }
 
 interface Props {
@@ -63,6 +91,9 @@ export function TaskRow({
       <button type="button" className="task-row__title" onClick={() => onOpen(task)} title="Open task">
         {task.title}
       </button>
+
+      {/* Timers are personal, so a shared task's isn't shown here. */}
+      {task.running_since != null && !task.owner_name && <RunningClock task={task} onOpen={onOpen} />}
 
       {task.owner_name && (
         <span className="task-row__owner" title={`Shared with you by ${task.owner_name}`}>

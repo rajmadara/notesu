@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Timer as TimerIcon, X } from 'lucide-react'
 import type { Task } from '../../lib/types'
-import { beep, formatClock, formatSpent } from '../../lib/timer'
+import { beep, clearCountdown, countdownOf, formatClock, formatSpent, saveCountdown } from '../../lib/timer'
 
 type Mode = 'stopwatch' | 'timer'
 
@@ -28,7 +28,7 @@ function write(key: string, value: string) {
 interface Props {
   task: Task
   onStart: (task: Task) => Promise<void>
-  onStop: (task: Task) => Promise<void>
+  onStop: (task: Task, at?: number) => Promise<void>
   onReset: (task: Task) => Promise<void>
   /** The panel content that sits below the timer; the timer's card is drawn
    *  above it, so opening the timer pushes this down. */
@@ -53,7 +53,9 @@ const TimerContext = createContext<TimerView | null>(null)
  * PomodoroButton, which lives in the notes toolbar) opens it as a card above
  * the notes, pushing them down, with the stopwatch / timer choice at the top.
  * Collapsing the card only hides it; a run carries on, and the button shows the
- * live clock meanwhile. Closing the *panel* pauses a run started here.
+ * live clock meanwhile. Closing the *panel* doesn't stop a run either: it keeps
+ * going on the server and shows on the task's row in the list. A countdown is
+ * remembered (see lib/timer) so reopening the task finds it where it was.
  *
  * Both modes record against the task: a run is started and stopped on the
  * server, which adds it to the task's saved total, so time spent counts
@@ -61,12 +63,15 @@ const TimerContext = createContext<TimerView | null>(null)
  * countdown is its own session and shows the total underneath.
  */
 export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: Props) {
-  // A run already going when the panel opens (the tab was closed mid-run) can
-  // only have been a stopwatch — the countdown's progress isn't saved.
+  // A run already going when the panel opens (it was left running, or the tab
+  // was closed mid-run). It was a countdown if one was remembered for it,
+  // otherwise a stopwatch.
   const leftover = task.running_since !== null && task.running_since !== undefined
+  const [restored] = useState(() => (leftover ? countdownOf(task) : null))
 
   const [preferred, setPreferred] = useState<Mode>(() => (read(MODE_KEY) === 'timer' ? 'timer' : 'stopwatch'))
   const [minutes, setMinutes] = useState(() => {
+    if (restored) return restored.minutes
     const saved = Number(read(MINUTES_KEY))
     return saved >= 1 && saved <= 600 ? saved : 25
   })
@@ -75,7 +80,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
   const [open, setOpen] = useState(false)
 
   const [running, setRunning] = useState(leftover)
-  const [runMode, setRunMode] = useState<Mode>('stopwatch')
+  const [runMode, setRunMode] = useState<Mode>(restored ? 'timer' : 'stopwatch')
   // Client clock at the start of the current run, and the task's total (ms) at
   // that moment — the display is base + elapsed, so it never waits on a request.
   const [runStart, setRunStart] = useState<number | null>(leftover ? Number(task.running_since) : null)
@@ -83,7 +88,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
   const [now, setNow] = useState(() => Date.now())
   // Holds the display steady between pausing and the saved total coming back.
   const [frozenMs, setFrozenMs] = useState<number | null>(null)
-  const [elapsedBefore, setElapsedBefore] = useState(0) // countdown progress before this run
+  const [elapsedBefore, setElapsedBefore] = useState(restored?.before ?? 0) // countdown progress before this run
 
   const mode = running ? runMode : preferred
   const total = minutes * 60000
@@ -106,23 +111,31 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
   // so this is checked each time; it only acts once the run is over.
   useEffect(() => {
     if (!running || runMode !== 'timer' || remaining > 0) return
+    // It really ended when what was left at the start ran out. With the panel
+    // closed that can be a while ago: stop the run there so the idle time after
+    // it isn't counted, and don't beep about something long past.
+    const left = total - elapsedBefore
+    const endedAt = (runStart ?? Date.now()) + left
     setElapsedBefore(total)
-    setFrozenMs(taskMs)
+    setFrozenMs(baseMs + Math.min(runElapsed, left))
     setRunning(false)
-    beep()
-    void onStop(task)
-  }, [running, runMode, remaining, total, taskMs, task, onStop])
+    clearCountdown(task.id)
+    if (Date.now() - endedAt < 2000) beep()
+    void onStop(task, endedAt)
+  }, [running, runMode, remaining, total, elapsedBefore, runStart, baseMs, runElapsed, task, onStop])
 
-  // Closing the panel pauses a run that was started from it.
-  const startedHere = useRef(false)
-  const live = useRef({ running, task, onStop })
-  live.current = { running, task, onStop }
-  useEffect(
-    () => () => {
-      if (startedHere.current && live.current.running) void live.current.onStop(live.current.task)
-    },
-    [],
-  )
+  // Remember a running countdown (once the server has given the run its start
+  // time), so it survives the panel closing and can be shown on the list.
+  useEffect(() => {
+    if (running && runMode === 'timer' && task.running_since !== null && task.running_since !== undefined) {
+      saveCountdown(task.id, { runningSince: Number(task.running_since), minutes, before: elapsedBefore })
+    }
+  }, [running, runMode, task.id, task.running_since, minutes, elapsedBefore])
+
+  // Nothing is running, so nothing should be remembered as running.
+  useEffect(() => {
+    if (!leftover) clearCountdown(task.id)
+  }, [leftover, task.id])
 
   // Opening moves focus into the card, collapsing hands it back to the button,
   // so keyboard users aren't dropped at the top of the page.
@@ -144,7 +157,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
     setRunMode(preferred)
     setFrozenMs(null)
     setRunning(true)
-    startedHere.current = true
+    if (preferred !== 'timer') clearCountdown(task.id)
     await onStart(task)
   }
 
@@ -152,6 +165,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
     if (runMode === 'timer') setElapsedBefore(cdElapsed)
     setFrozenMs(taskMs)
     setRunning(false)
+    clearCountdown(task.id)
     await onStop(task)
   }
 
@@ -160,6 +174,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
       if (running) {
         setFrozenMs(taskMs)
         setRunning(false)
+        clearCountdown(task.id)
         void onStop(task)
       }
       setElapsedBefore(0)
@@ -206,64 +221,44 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
     </div>
   )
 
-  // Everything below the mode choice: the clock, its status, presets, controls.
-  const face = (
+  // The countdown's length: a progress bar and the presets. Only in Timer mode.
+  const countdownSetup = mode === 'timer' && (
     <>
-      <div className="timer__digits">{digits}</div>
-      <div className="timer__status">
-        <span className="timer__dot" />
-        {status}
-        {mode === 'timer' && <span className="timer__spent"> · {formatSpent(taskMs)} on this task</span>}
+      <div className="timer__bar" role="presentation">
+        <span style={{ width: `${(Math.max(0, remaining) / total) * 100}%` }} />
       </div>
-
-      {mode === 'timer' && (
-        <>
-          <div className="timer__bar" role="presentation">
-            <span style={{ width: `${(Math.max(0, remaining) / total) * 100}%` }} />
-          </div>
-          <div className="timer__presets">
-            {PRESETS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={`timer__chip${minutes === m ? ' is-on' : ''}`}
-                disabled={running}
-                onClick={() => {
-                  setCustom('')
-                  chooseMinutes(m)
-                }}
-              >
-                {m} min
-              </button>
-            ))}
-            <label className="timer__custom">
-              or
-              <input
-                type="number"
-                min={1}
-                max={600}
-                placeholder="30"
-                value={custom}
-                disabled={running}
-                onChange={(e) => {
-                  setCustom(e.target.value)
-                  const v = Number(e.target.value)
-                  if (v >= 1 && v <= 600) chooseMinutes(Math.floor(v))
-                }}
-              />
-              min
-            </label>
-          </div>
-        </>
-      )}
-
-      <div className="timer__controls">
-        <button type="button" className="timer__btn timer__btn--primary" onClick={running ? pause : start}>
-          {toggleLabel}
-        </button>
-        <button type="button" className="timer__btn" onClick={reset}>
-          Reset
-        </button>
+      <div className="timer__presets">
+        {PRESETS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={`timer__chip${minutes === m ? ' is-on' : ''}`}
+            disabled={running}
+            onClick={() => {
+              setCustom('')
+              chooseMinutes(m)
+            }}
+          >
+            {m} min
+          </button>
+        ))}
+        <label className="timer__custom">
+          or
+          <input
+            type="number"
+            min={1}
+            max={600}
+            placeholder="30"
+            value={custom}
+            disabled={running}
+            onChange={(e) => {
+              setCustom(e.target.value)
+              const v = Number(e.target.value)
+              if (v >= 1 && v <= 600) chooseMinutes(Math.floor(v))
+            }}
+          />
+          min
+        </label>
       </div>
     </>
   )
@@ -276,6 +271,7 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
         <section className="timer" data-state={state} aria-label="Pomodoro timer">
           <div className="timer__head">
             <span className="timer__name">Pomodoro</span>
+            {modeSwitch}
             <button
               ref={collapseBtn}
               type="button"
@@ -284,11 +280,30 @@ export function TaskTimerProvider({ task, onStart, onStop, onReset, children }: 
               aria-label="Close the timer"
               title="Close"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
-          {modeSwitch}
-          {face}
+
+          <div className="timer__main">
+            <div className="timer__reading">
+              <div className="timer__digits">{digits}</div>
+              <div className="timer__status">
+                <span className="timer__dot" />
+                {status}
+                {mode === 'timer' && <span className="timer__spent"> · {formatSpent(taskMs)} on this task</span>}
+              </div>
+            </div>
+            <div className="timer__controls">
+              <button type="button" className="timer__btn timer__btn--primary" onClick={running ? pause : start}>
+                {toggleLabel}
+              </button>
+              <button type="button" className="timer__btn" onClick={reset}>
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {countdownSetup}
         </section>
       )}
       {children}

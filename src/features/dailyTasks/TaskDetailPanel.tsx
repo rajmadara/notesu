@@ -31,7 +31,7 @@ interface Props {
 
 export interface TimerHandlers {
   onStart: (task: Task) => Promise<void>
-  onStop: (task: Task) => Promise<void>
+  onStop: (task: Task, at?: number) => Promise<void>
   onReset: (task: Task) => Promise<void>
 }
 

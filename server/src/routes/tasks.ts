@@ -142,7 +142,12 @@ export function createTasksRouter(store: TaskStore): Router {
   router.post(
     '/:id/timer/stop',
     asyncHandler(async (req, res) => {
-      await store.stopTaskTimer(req.userId, Number(req.params.id))
+      const at: unknown = req.body?.at
+      await store.stopTaskTimer(
+        req.userId,
+        Number(req.params.id),
+        typeof at === 'number' && Number.isFinite(at) ? at : undefined,
+      )
       res.status(204).end()
     }),
   )

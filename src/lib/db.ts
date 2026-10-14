@@ -129,8 +129,13 @@ export async function startTaskTimer(id: number): Promise<void> {
   await request<{ running_since: number }>(`/${id}/timer/start`, { method: 'POST' })
 }
 
-export async function stopTaskTimer(id: number): Promise<void> {
-  await request<void>(`/${id}/timer/stop`, { method: 'POST' })
+/** `at` (epoch ms) ends the run at that moment rather than now — for a countdown
+ *  that finished while nobody was watching. */
+export async function stopTaskTimer(id: number, at?: number): Promise<void> {
+  await request<void>(`/${id}/timer/stop`, {
+    method: 'POST',
+    body: JSON.stringify(at === undefined ? {} : { at }),
+  })
 }
 
 export async function resetTaskTimer(id: number): Promise<void> {

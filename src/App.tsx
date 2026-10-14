@@ -200,8 +200,8 @@ function App() {
     await refreshTasks()
   }
 
-  async function handleTimerStop(task: Task) {
-    await stopTaskTimer(task.id).catch(() => null)
+  async function handleTimerStop(task: Task, at?: number) {
+    await stopTaskTimer(task.id, at).catch(() => null)
     await refreshTasks()
   }
 
