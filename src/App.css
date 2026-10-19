@@ -989,6 +989,33 @@
   border-color: var(--accent-border);
 }
 
+.task-detail-panel__date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-detail-panel__date-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.task-detail-panel__date-clear:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
 /* The Pomodoro button in the panel header, next to the task it times. */
 .timer-trigger {
   display: inline-flex;

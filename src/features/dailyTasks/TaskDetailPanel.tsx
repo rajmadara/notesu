@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import type { Note, Task, TaskPriority } from '../../lib/types'
 import { formatNote, getNotesForTask, upsertTaskNote } from '../../lib/db'
 import { formatTimestamp } from '../../lib/date'
@@ -193,13 +194,28 @@ export function TaskDetailPanel({
               <label className="task-detail-panel__label" htmlFor="task-due-date">
                 Due date
               </label>
-              <input
-                id="task-due-date"
-                type="date"
-                className="task-detail-panel__date"
-                value={task.due_date ?? ''}
-                onChange={(e) => onChangeDueDate(task, e.target.value || null)}
-              />
+              <div className="task-detail-panel__date-row">
+                <input
+                  id="task-due-date"
+                  type="date"
+                  className="task-detail-panel__date"
+                  value={task.due_date ?? ''}
+                  onChange={(e) => onChangeDueDate(task, e.target.value || null)}
+                />
+                {/* Not every browser's date picker can clear itself (phones
+                    mostly can't), so unsetting is an explicit button. */}
+                {task.due_date && (
+                  <button
+                    type="button"
+                    className="task-detail-panel__date-clear"
+                    onClick={() => onChangeDueDate(task, null)}
+                    aria-label="Clear due date"
+                    title="Clear due date"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="task-detail-panel__field task-detail-panel__field--grow">
