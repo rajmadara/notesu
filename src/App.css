@@ -847,7 +847,10 @@
   position: fixed;
   inset: 0;
   background: rgba(30, 27, 18, 0.35);
-  z-index: 20;
+  /* Above the phone's bottom navigation bar (25), which would otherwise sit
+     over the panel's Delete / Archive / Done buttons — and below the sidebar
+     drawer (30). */
+  z-index: 28;
   display: flex;
   justify-content: flex-end;
   animation: task-detail-fade-in 0.15s ease;
@@ -1723,7 +1726,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
